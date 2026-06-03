@@ -1,158 +1,856 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>メモカレンダー</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .calendar-cell { height: 80px; font-size: 0.8rem; overflow-y: auto; }
-        .event-tag { background: #dbeafe; color: #1e40af; padding: 1px 3px; border-radius: 3px; margin-top: 1px; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .tab-content { display: none; }
-        .tab-active { display: block; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="メモカレンダー">
+<title>メモカレンダー</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --border: #ddd8cf;
+    --text: #2c2c2c;
+    --text-light: #888;
+    --accent: #3a7bd5;
+    --accent-light: #e8f0fb;
+    --today-bg: #3a7bd5;
+    --event-dot: #e05c2e;
+    --range-bg: #fde8df;
+    --highlight: #fff3cd;
+    --font: "BIZ UDGothic", "BIZ UDP Gothic", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    min-height: 100vh;
+  }
+
+  /* ===== ヘッダー ===== */
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .header-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-small { padding: 4px 10px; font-size: 0.8rem; }
+  .sync-status {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-right: 4px;
+  }
+
+  /* ===== メインレイアウト ===== */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    height: calc(100vh - 53px);
+  }
+
+  /* ===== テキストエリア側 ===== */
+  .pane-text {
+    background: var(--surface);
+    border-right: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .pane-label {
+    padding: 8px 14px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    background: #faf9f7;
+  }
+  #schedule-text {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 14px;
+    font-family: var(--font);
+    font-size: 1rem;
+    line-height: 1.9;
+    background: transparent;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  /* ===== カレンダー側 ===== */
+  .pane-calendar {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: #faf9f7;
+  }
+  .cal-nav button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.15s;
+  }
+  .cal-nav button:hover { background: var(--accent-light); }
+  .cal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .cal-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 2px;
+  }
+  .cal-weekday {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 0;
+    color: var(--text-light);
+  }
+  .cal-weekday:first-child { color: #c0392b; }
+  .cal-weekday:last-child { color: #2980b9; }
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal-cell {
+    min-height: 56px;
+    border-radius: 6px;
+    padding: 3px 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border: 1px solid transparent;
+    position: relative;
+  }
+  .cal-cell:hover { background: var(--accent-light); }
+  .cal-cell.other-month { opacity: 0.35; }
+  .cal-cell.today .day-num {
+    background: var(--today-bg);
+    color: #fff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .cal-cell.selected { border-color: var(--accent); background: var(--accent-light); }
+  .cal-cell.sunday .day-num { color: #c0392b; }
+  .cal-cell.saturday .day-num { color: #2980b9; }
+  .day-num {
+    font-size: 0.85rem;
+    font-weight: 600;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .day-events {
+    margin-top: 1px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .event-chip {
+    font-size: 0.65rem;
+    background: var(--range-bg);
+    color: var(--event-dot);
+    border-radius: 3px;
+    padding: 1px 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .event-chip.range-start { border-radius: 3px 0 0 3px; }
+  .event-chip.range-mid { border-radius: 0; background: #fef0e8; }
+  .event-chip.range-end { border-radius: 0 3px 3px 0; }
+
+  /* ===== ポップアップ ===== */
+  .popup {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .popup.hidden { display: none; }
+  .popup-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 20px 24px;
+    min-width: 280px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .popup-box h2 { font-size: 1rem; margin-bottom: 12px; }
+  .popup-event-list { font-size: 0.95rem; line-height: 2; }
+  .popup-event-list li { list-style: none; padding-left: 14px; position: relative; }
+  .popup-event-list li::before {
+    content: "●";
+    color: var(--event-dot);
+    font-size: 0.55rem;
+    position: absolute;
+    left: 0;
+    top: 6px;
+  }
+  .popup-close {
+    margin-top: 14px;
+    display: block;
+    width: 100%;
+    padding: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-family: var(--font);
+    font-weight: 600;
+  }
+
+  /* ===== GitHub設定モーダル ===== */
+  .modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.hidden { display: none; }
+  .modal-box {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 22px 24px;
+    min-width: 300px;
+    max-width: 92vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .modal-box h2 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-group { margin-bottom: 12px; }
+  .form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    background: var(--bg);
+  }
+  .form-group input:focus {
+    outline: 2px solid var(--accent);
+    border-color: transparent;
+  }
+  .form-note {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 3px;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .modal-buttons .btn { flex: 1; padding: 9px; font-size: 0.9rem; }
+
+  /* ===== スマホレイアウト ===== */
+  @media (max-width: 700px) {
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      height: auto;
+      min-height: calc(100vh - 53px);
+    }
+    .pane-text {
+      border-right: none;
+      border-bottom: 2px solid var(--border);
+      height: 40vh;
+      min-height: 200px;
+    }
+    #schedule-text { font-size: 0.95rem; }
+    .pane-calendar { min-height: 60vh; }
+    .cal-cell { min-height: 48px; }
+  }
+
+  /* ===== ハイライト行 ===== */
+  .line-highlight {
+    background: var(--highlight);
+    transition: background 0.8s;
+  }
+</style>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col">
-    <header class="bg-white p-3 flex justify-between items-center shadow-sm">
-        <h1 class="font-bold text-lg">メモカレンダー</h1>
-        <button onclick="document.getElementById('settingsModal').classList.remove('hidden')">⚙️</button>
-    </header>
+<body>
 
-    <main class="flex-1 overflow-hidden p-2">
-        <div id="memoTab" class="tab-content tab-active h-full">
-            <textarea id="memoInput" class="w-full h-full p-4 border rounded shadow-inner" oninput="parseAndRender()"></textarea>
-        </div>
-        <div id="calendarTab" class="tab-content h-full flex flex-col">
-            <div class="flex justify-between items-center bg-white p-2 mb-2 rounded shadow">
-                <button onclick="changeMonth(-1)" class="p-2">◀</button>
-                <h2 id="monthDisplay" class="font-bold"></h2>
-                <button onclick="changeMonth(1)" class="p-2">▶</button>
-            </div>
-            <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center bg-white p-2 rounded shadow flex-1"></div>
-        </div>
-    </main>
+<header>
+  <h1>📅 メモカレンダー</h1>
+  <div class="header-buttons">
+    <span class="sync-status" id="sync-status"></span>
+    <button class="btn btn-primary btn-small" id="btn-sync">💾 保存・同期</button>
+    <button class="btn btn-secondary btn-small" id="btn-settings">⚙ GitHub設定</button>
+  </div>
+</header>
 
-    <nav class="bg-white border-t flex">
-        <button onclick="showTab('memoTab')" class="flex-1 p-4 border-r">📝メモ</button>
-        <button onclick="showTab('calendarTab')" class="flex-1 p-4 border-r">📅カレンダー</button>
-        <button onclick="syncWithGitHub()" class="flex-1 p-4 bg-blue-600 text-white font-bold">保存/同期</button>
-    </nav>
+<div class="main">
+  <!-- テキストエリア -->
+  <div class="pane-text">
+    <div class="pane-label">📝 日程メモ</div>
+    <textarea id="schedule-text" placeholder="例：
+6/5 生徒会選挙ポスター
+6/23火　創立記念日
+10/7〜10/9 修学旅行"></textarea>
+  </div>
 
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded w-full max-w-sm">
-            <h2 class="font-bold mb-4">GitHub設定</h2>
-            <input id="ghToken" type="password" placeholder="Token" class="w-full border p-2 mb-2">
-            <input id="ghUser" type="text" placeholder="ユーザー名" class="w-full border p-2 mb-2">
-            <input id="ghRepo" type="text" placeholder="リポジトリ名" class="w-full border p-2 mb-2">
-            <input id="ghPath" type="text" value="schedule.txt" class="w-full border p-2 mb-2">
-            <button onclick="saveSettings()" class="w-full bg-green-500 text-white p-2 mt-4 rounded">保存して読み込み</button>
-        </div>
+  <!-- カレンダー -->
+  <div class="pane-calendar">
+    <div class="cal-nav">
+      <button id="btn-prev">‹</button>
+      <span class="cal-title" id="cal-title"></span>
+      <button id="btn-next">›</button>
     </div>
+    <div class="cal-grid">
+      <div class="cal-weekdays">
+        <div class="cal-weekday">日</div>
+        <div class="cal-weekday">月</div>
+        <div class="cal-weekday">火</div>
+        <div class="cal-weekday">水</div>
+        <div class="cal-weekday">木</div>
+        <div class="cal-weekday">金</div>
+        <div class="cal-weekday">土</div>
+      </div>
+      <div class="cal-days" id="cal-days"></div>
+    </div>
+  </div>
+</div>
 
-    <script>
-        let state = { currentDate: new Date(), events: [] };
+<!-- 日付クリック時ポップアップ -->
+<div class="popup hidden" id="popup">
+  <div class="popup-box">
+    <h2 id="popup-date"></h2>
+    <ul class="popup-event-list" id="popup-events"></ul>
+    <button class="popup-close" id="popup-close">閉じる</button>
+  </div>
+</div>
 
-        async function syncWithGitHub() {
-            const token = localStorage.getItem('ghToken');
-            const user = localStorage.getItem('ghUser');
-            const repo = localStorage.getItem('ghRepo');
-            const path = localStorage.getItem('ghPath') || 'schedule.txt';
-            const content = document.getElementById('memoInput').value;
+<!-- GitHub設定モーダル -->
+<div class="modal hidden" id="modal-github">
+  <div class="modal-box">
+    <h2>⚙ GitHub設定</h2>
+    <div class="form-group">
+      <label>GitHubユーザー名</label>
+      <input type="text" id="gh-user" placeholder="例: sorafjah" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>リポジトリ名</label>
+      <input type="text" id="gh-repo" placeholder="例: my-schedule" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>ファイルパス</label>
+      <input type="text" id="gh-path" placeholder="例: schedule.txt" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Personal Access Token</label>
+      <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      <div class="form-note">※ ブラウザのlocalStorageにのみ保存。外部送信なし。</div>
+    </div>
+    <div class="form-group">
+      <label>コミットメッセージ（省略可）</label>
+      <input type="text" id="gh-commit-msg" placeholder="Update schedule" autocomplete="off">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" id="modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="modal-save">保存</button>
+    </div>
+  </div>
+</div>
 
-            if(!token || !user || !repo) return alert('設定を入力してください');
+<script>
+// =====================
+// サンプルデータ
+// =====================
+const SAMPLE = `6/5生徒会選挙ポスター
+6/7そめはちさんNHK
+6月6日　福岡
+6/23火　創立記念日
+7/15水     あかつき18:30
+9/14月　弁当
+10/7〜10/9 修学旅行
+11/27金　生徒会選挙`;
 
-            // 1. 現在のファイル情報を取得してSHAを取得（上書きに必要）
-            const getRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-                headers: { 'Authorization': `token ${token}` }
-            });
-            const fileData = await getRes.json();
-            
-            // 2. 更新（PUT）
-            const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: "Update schedule",
-                    content: btoa(unescape(encodeURIComponent(content))),
-                    sha: fileData.sha
-                })
-            });
-            if(res.ok) alert('GitHubに保存しました！');
-            else alert('保存失敗: ' + res.statusText);
+// =====================
+// 状態
+// =====================
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth(); // 0-indexed
+let events = {}; // { "2025-06-05": ["タイトル", ...], ... }
+let selectedDate = null;
+let parseTimer = null;
+
+// =====================
+// 日付解析
+// =====================
+function parseYear(m, d) {
+  // 年指定がない場合、今年か来年か近い方を選ぶ
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const d1 = new Date(thisYear, m - 1, d);
+  const d2 = new Date(thisYear + 1, m - 1, d);
+  // 過去3ヶ月以上前なら来年
+  const threshold = new Date(now);
+  threshold.setMonth(threshold.getMonth() - 3);
+  return d1 < threshold ? thisYear + 1 : thisYear;
+}
+
+function toKey(year, month, day) {
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+
+function parseSchedule(text) {
+  const result = {}; // key -> [{title, lineIndex}]
+
+  const lines = text.split('\n');
+
+  // 日付パターン群
+  const patterns = [
+    // 期間: 10/7〜10/9 or 10/7～10/9 or 6/9〜6/12
+    {
+      re: /^(\d{1,2})[\/月](\d{1,2})[日]?\s*[〜～\-]\s*(\d{1,2})[\/月](\d{1,2})[日]?\s*(.*)/,
+      type: 'range',
+      extract: m => ({ m1: +m[1], d1: +m[2], m2: +m[3], d2: +m[4], title: m[5].trim() || '（予定）' })
+    },
+    // 日本語表記: 6月6日
+    {
+      re: /^(\d{1,2})月(\d{1,2})日[（(]?[月火水木金土日]?[）)]?\s*(.*)/,
+      type: 'single',
+      extract: m => ({ mo: +m[1], da: +m[2], title: m[3].trim() || '（予定）' })
+    },
+    // スラッシュ: 6/5 や 6/23火
+    {
+      re: /^(\d{1,2})\/(\d{1,2})[月火水木金土日]?\s*(.*)/,
+      type: 'single',
+      extract: m => ({ mo: +m[1], da: +m[2], title: m[3].trim() || '（予定）' })
+    },
+  ];
+
+  lines.forEach((rawLine, lineIndex) => {
+    const line = rawLine.trim();
+    if (!line) return;
+
+    let matched = false;
+
+    for (const pat of patterns) {
+      const m = line.match(pat.re);
+      if (!m) continue;
+      matched = true;
+
+      if (pat.type === 'single') {
+        const { mo, da, title } = pat.extract(m);
+        if (mo < 1 || mo > 12 || da < 1 || da > 31) break;
+        const yr = parseYear(mo, da);
+        const key = toKey(yr, mo, da);
+        if (!result[key]) result[key] = [];
+        result[key].push({ title, lineIndex });
+      } else if (pat.type === 'range') {
+        const { m1, d1, m2, d2, title } = pat.extract(m);
+        if (m1 < 1 || m1 > 12 || d1 < 1 || d1 > 31) break;
+        if (m2 < 1 || m2 > 12 || d2 < 1 || d2 > 31) break;
+        const yr1 = parseYear(m1, d1);
+        let cur = new Date(yr1, m1 - 1, d1);
+        const yr2 = m2 < m1 ? yr1 + 1 : yr1;
+        const end = new Date(yr2, m2 - 1, d2);
+        let safeCount = 0;
+        while (cur <= end && safeCount < 400) {
+          const key = toKey(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());
+          if (!result[key]) result[key] = [];
+          result[key].push({ title, lineIndex });
+          cur.setDate(cur.getDate() + 1);
+          safeCount++;
         }
+      }
+      break;
+    }
+    // マッチしない行は無視（エラーにしない）
+  });
 
-        async function fetchFromGitHub() {
-            const token = localStorage.getItem('ghToken');
-            const user = localStorage.getItem('ghUser');
-            const repo = localStorage.getItem('ghRepo');
-            const path = localStorage.getItem('ghPath') || 'schedule.txt';
-            if(!token || !user || !repo) return;
+  return result;
+}
 
-            const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-                headers: { 'Authorization': `token ${token}`, 'Cache-Control': 'no-cache' }
-            });
-            if(res.ok) {
-                const data = await res.json();
-                const content = decodeURIComponent(escape(atob(data.content)));
-                document.getElementById('memoInput').value = content;
-                localStorage.setItem('memoBackup', content);
-                parseAndRender();
-            }
-        }
+// =====================
+// カレンダー描画
+// =====================
+function renderCalendar() {
+  const title = document.getElementById('cal-title');
+  title.textContent = `${currentYear}年 ${currentMonth + 1}月`;
 
-        function showTab(id) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('tab-active'));
-            document.getElementById(id).classList.add('tab-active');
-            if(id === 'calendarTab') parseAndRender();
-        }
+  const container = document.getElementById('cal-days');
+  container.innerHTML = '';
 
-        function parseAndRender() {
-            const text = document.getElementById('memoInput').value;
-            localStorage.setItem('memoBackup', text);
-            state.events = [];
-            text.split('\n').forEach(line => {
-                const match = line.match(/(\d{1,2})[/\.](\d{1,2})|(\d{1,2})月(\d{1,2})日/);
-                if(match) {
-                    state.events.push({ m: parseInt(match[1]||match[3]), d: parseInt(match[2]||match[4]), label: line });
-                }
-            });
-            renderCalendar();
-        }
+  const today = new Date();
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay = new Date(currentYear, currentMonth + 1, 0);
+  const startDow = firstDay.getDay(); // 0=日
 
-        function renderCalendar() {
-            const grid = document.getElementById('calendarGrid');
-            const m = state.currentDate.getMonth();
-            const y = state.currentDate.getFullYear();
-            document.getElementById('monthDisplay').innerText = `${y}年 ${m+1}月`;
-            grid.innerHTML = '日月火水木金土'.split('').map(d => `<div class="font-bold text-xs">${d}</div>`).join('');
-            const days = new Date(y, m+1, 0).getDate();
-            const first = new Date(y, m, 1).getDay();
-            for(let i=0; i<first; i++) grid.innerHTML += '<div></div>';
-            for(let d=1; d<=days; d++) {
-                const evs = state.events.filter(e => e.m === m+1 && e.d === d);
-                grid.innerHTML += `<div class="border p-1 calendar-cell">${d}${evs.map(e => `<span class="event-tag">${e.label}</span>`).join('')}</div>`;
-            }
-        }
+  // 前月の余白
+  const prevLastDay = new Date(currentYear, currentMonth, 0);
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = prevLastDay.getDate() - i;
+    const m = currentMonth === 0 ? 12 : currentMonth;
+    const y = currentMonth === 0 ? currentYear - 1 : currentYear;
+    container.appendChild(makeCell(y, m, d, true));
+  }
 
-        function saveSettings() {
-            localStorage.setItem('ghToken', document.getElementById('ghToken').value);
-            localStorage.setItem('ghUser', document.getElementById('ghUser').value);
-            localStorage.setItem('ghRepo', document.getElementById('ghRepo').value);
-            localStorage.setItem('ghPath', document.getElementById('ghPath').value);
-            document.getElementById('settingsModal').classList.add('hidden');
-            fetchFromGitHub();
-        }
+  // 当月
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    container.appendChild(makeCell(currentYear, currentMonth + 1, d, false));
+  }
 
-        window.onload = () => {
-            document.getElementById('ghToken').value = localStorage.getItem('ghToken') || '';
-            document.getElementById('ghUser').value = localStorage.getItem('ghUser') || '';
-            document.getElementById('ghRepo').value = localStorage.getItem('ghRepo') || '';
-            document.getElementById('ghPath').value = localStorage.getItem('ghPath') || 'schedule.txt';
-            document.getElementById('memoInput').value = localStorage.getItem('memoBackup') || '';
-            fetchFromGitHub();
-        };
-        function changeMonth(delta) { state.currentDate.setMonth(state.currentDate.getMonth()+delta); renderCalendar(); }
-    </script>
+  // 翌月の余白
+  const endDow = lastDay.getDay();
+  const nextM = currentMonth === 11 ? 1 : currentMonth + 2;
+  const nextY = currentMonth === 11 ? currentYear + 1 : currentYear;
+  for (let d = 1; d <= 6 - endDow; d++) {
+    container.appendChild(makeCell(nextY, nextM, d, true));
+  }
+}
+
+function makeCell(year, month, day, otherMonth) {
+  const cell = document.createElement('div');
+  cell.className = 'cal-cell';
+  if (otherMonth) cell.classList.add('other-month');
+
+  const dow = new Date(year, month - 1, day).getDay();
+  if (dow === 0) cell.classList.add('sunday');
+  if (dow === 6) cell.classList.add('saturday');
+
+  const today = new Date();
+  if (year === today.getFullYear() && month === today.getMonth() + 1 && day === today.getDate()) {
+    cell.classList.add('today');
+  }
+
+  const key = toKey(year, month, day);
+  if (selectedDate === key) cell.classList.add('selected');
+
+  // 日付数字
+  const num = document.createElement('div');
+  num.className = 'day-num';
+  num.textContent = day;
+  cell.appendChild(num);
+
+  // イベントチップ
+  if (events[key]) {
+    const evDiv = document.createElement('div');
+    evDiv.className = 'day-events';
+    const shown = events[key].slice(0, 2);
+    shown.forEach(ev => {
+      const chip = document.createElement('div');
+      chip.className = 'event-chip';
+      chip.textContent = ev.title;
+      evDiv.appendChild(chip);
+    });
+    if (events[key].length > 2) {
+      const more = document.createElement('div');
+      more.className = 'event-chip';
+      more.textContent = `+${events[key].length - 2}件`;
+      evDiv.appendChild(more);
+    }
+    cell.appendChild(evDiv);
+  }
+
+  cell.addEventListener('click', () => onCellClick(key, year, month, day));
+  return cell;
+}
+
+function onCellClick(key, year, month, day) {
+  selectedDate = key;
+
+  if (events[key] && events[key].length > 0) {
+    // ポップアップ表示
+    document.getElementById('popup-date').textContent =
+      `${year}年${month}月${day}日`;
+    const list = document.getElementById('popup-events');
+    list.innerHTML = '';
+    events[key].forEach(ev => {
+      const li = document.createElement('li');
+      li.textContent = ev.title;
+      li.style.cursor = 'pointer';
+      li.addEventListener('click', () => {
+        closePopup();
+        highlightLine(ev.lineIndex);
+      });
+      list.appendChild(li);
+    });
+    document.getElementById('popup').classList.remove('hidden');
+  }
+
+  renderCalendar();
+}
+
+function closePopup() {
+  document.getElementById('popup').classList.add('hidden');
+}
+
+function highlightLine(lineIndex) {
+  const ta = document.getElementById('schedule-text');
+  const lines = ta.value.split('\n');
+  let pos = 0;
+  for (let i = 0; i < lineIndex; i++) pos += lines[i].length + 1;
+  const end = pos + (lines[lineIndex] || '').length;
+  ta.focus();
+  ta.setSelectionRange(pos, end);
+  // スクロール
+  const lineHeight = 1.9 * 16;
+  ta.scrollTop = lineIndex * lineHeight - 40;
+}
+
+// =====================
+// テキスト変更ハンドラ
+// =====================
+function onTextChange() {
+  clearTimeout(parseTimer);
+  parseTimer = setTimeout(() => {
+    events = parseSchedule(document.getElementById('schedule-text').value);
+    renderCalendar();
+  }, 600);
+}
+
+// =====================
+// GitHub 設定
+// =====================
+const GH_KEYS = ['gh-user','gh-repo','gh-path','gh-token','gh-commit-msg'];
+
+function loadGhSettings() {
+  GH_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) document.getElementById(k).value = v;
+  });
+}
+
+function saveGhSettings() {
+  GH_KEYS.forEach(k => {
+    localStorage.setItem(k, document.getElementById(k).value);
+  });
+  document.getElementById('modal-github').classList.add('hidden');
+}
+
+function getGhConfig() {
+  return {
+    user: localStorage.getItem('gh-user') || '',
+    repo: localStorage.getItem('gh-repo') || '',
+    path: localStorage.getItem('gh-path') || 'schedule.txt',
+    token: localStorage.getItem('gh-token') || '',
+    msg: localStorage.getItem('gh-commit-msg') || 'Update schedule',
+  };
+}
+
+function isGhConfigured() {
+  const c = getGhConfig();
+  return c.user && c.repo && c.token;
+}
+
+// =====================
+// GitHub API
+// =====================
+async function ghFetch(text) {
+  const c = getGhConfig();
+  const url = `https://api.github.com/repos/${c.user}/${c.repo}/contents/${c.path}`;
+  const headers = {
+    'Authorization': `token ${c.token}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json',
+  };
+
+  // SHA取得（既存ファイルの上書きに必要）
+  let sha = '';
+  try {
+    const res = await fetch(url, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      sha = data.sha;
+      if (text === null) {
+        // 読み込みモード
+        return atob(data.content.replace(/\n/g, ''));
+      }
+    }
+  } catch(e) {}
+
+  if (text === null) return null;
+
+  // 書き込み
+  const body = {
+    message: c.msg || 'Update schedule',
+    content: btoa(unescape(encodeURIComponent(text))),
+  };
+  if (sha) body.sha = sha;
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+  return res.ok;
+}
+
+function setStatus(msg, ok = true) {
+  const el = document.getElementById('sync-status');
+  el.textContent = msg;
+  el.style.color = ok ? '#27ae60' : '#e74c3c';
+  setTimeout(() => { el.textContent = ''; }, 4000);
+}
+
+async function syncLoad() {
+  if (!isGhConfigured()) return;
+  setStatus('読込中…', true);
+  try {
+    const text = await ghFetch(null);
+    if (text !== null) {
+      document.getElementById('schedule-text').value = text;
+      events = parseSchedule(text);
+      renderCalendar();
+      setStatus('✓ 読込完了');
+    }
+  } catch(e) {
+    setStatus('読込失敗', false);
+  }
+}
+
+async function syncSave() {
+  if (!isGhConfigured()) {
+    document.getElementById('modal-github').classList.remove('hidden');
+    loadGhSettings();
+    return;
+  }
+  setStatus('保存中…', true);
+  try {
+    const text = document.getElementById('schedule-text').value;
+    const ok = await ghFetch(text);
+    setStatus(ok ? '✓ 保存完了' : '保存失敗', !!ok);
+  } catch(e) {
+    setStatus('保存失敗', false);
+  }
+}
+
+// =====================
+// 初期化
+// =====================
+function init() {
+  // サンプルをセット（GitHubから読めた場合は上書きされる）
+  document.getElementById('schedule-text').value = SAMPLE;
+  events = parseSchedule(SAMPLE);
+  renderCalendar();
+
+  // テキスト変更
+  document.getElementById('schedule-text').addEventListener('input', onTextChange);
+
+  // カレンダーナビ
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    currentMonth--;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    renderCalendar();
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    currentMonth++;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    renderCalendar();
+  });
+
+  // 保存・同期ボタン
+  document.getElementById('btn-sync').addEventListener('click', syncSave);
+
+  // GitHub設定
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    loadGhSettings();
+    document.getElementById('modal-github').classList.remove('hidden');
+  });
+  document.getElementById('modal-cancel').addEventListener('click', () => {
+    document.getElementById('modal-github').classList.add('hidden');
+  });
+  document.getElementById('modal-save').addEventListener('click', saveGhSettings);
+
+  // ポップアップ閉じる
+  document.getElementById('popup-close').addEventListener('click', closePopup);
+  document.getElementById('popup').addEventListener('click', e => {
+    if (e.target === document.getElementById('popup')) closePopup();
+  });
+
+  // 起動時にGitHubから読み込み
+  syncLoad();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
