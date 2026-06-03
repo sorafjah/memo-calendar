@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>メモカレンダー</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .calendar-cell { height: 80px; font-size: 0.8rem; overflow-y: auto; }
+        .event-tag { background: #dbeafe; color: #1e40af; padding: 1px 3px; border-radius: 3px; margin-top: 1px; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .tab-content { display: none; }
+        .tab-active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <!-- ヘッダー -->
+    <header class="bg-white p-3 flex justify-between items-center shadow-sm">
+        <h1 class="font-bold text-lg">メモカレンダー</h1>
+        <button onclick="document.getElementById('settingsModal').classList.remove('hidden')" class="text-xl">⚙️</button>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="flex-1 overflow-hidden p-2">
+        <div id="memoTab" class="tab-content tab-active h-full">
+            <textarea id="memoInput" class="w-full h-full p-4 border rounded shadow-inner" placeholder="6/5 生徒会選挙&#10;10/7〜10/9 修学旅行"></textarea>
+        </div>
+        <div id="calendarTab" class="tab-content h-full flex flex-col">
+            <div class="flex justify-between items-center bg-white p-2 mb-2 rounded shadow">
+                <button onclick="changeMonth(-1)" class="p-2">◀</button>
+                <h2 id="monthDisplay" class="font-bold"></h2>
+                <button onclick="changeMonth(1)" class="p-2">▶</button>
+            </div>
+            <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center bg-white p-2 rounded shadow flex-1"></div>
+        </div>
+    </main>
+
+    <!-- フッターナビ -->
+    <nav class="bg-white border-t flex">
+        <button onclick="showTab('memoTab')" class="flex-1 p-4 text-center">📝メモ</button>
+        <button onclick="showTab('calendarTab')" class="flex-1 p-4 text-center">📅カレンダー</button>
+        <button onclick="syncWithGitHub()" class="flex-1 p-4 text-center bg-blue-500 text-white font-bold">保存/同期</button>
+    </nav>
+
+    <!-- 設定モーダル -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded w-full max-w-sm">
+            <h2 class="font-bold mb-4">GitHub設定</h2>
+            <input id="ghToken" type="password" placeholder="Personal Access Token" class="w-full border p-2 mb-2">
+            <input id="ghUser" type="text" placeholder="ユーザー名" class="w-full border p-2 mb-2">
+            <input id="ghRepo" type="text" placeholder="リポジトリ名" class="w-full border p-2 mb-2">
+            <button onclick="saveSettings()" class="w-full bg-green-500 text-white p-2 mt-4 rounded">保存</button>
+            <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="w-full mt-2 text-gray-500">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        let state = { currentDate: new Date(), events: [] };
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('tab-active'));
+            document.getElementById(tabId).classList.add('tab-active');
+            if(tabId === 'calendarTab') parseAndRender();
+        }
+
+        function parseAndRender() {
+            const text = document.getElementById('memoInput').value;
+            state.events = [];
+            text.split('\n').forEach(line => {
+                const match = line.match(/(\d{1,2})[/\.](\d{1,2})|(\d{1,2})月(\d{1,2})日/);
+                if (match) {
+                    const m = parseInt(match[1] || match[3]);
+                    const d = parseInt(match[2] || match[4]);
+                    state.events.push({ m, d, label: line.replace(/^\d+[\/\.]\d+\s*/, '') });
+                }
+            });
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            document.getElementById('monthDisplay').innerText = `${year}年 ${month + 1}月`;
+            grid.innerHTML = '日月火水木金土'.split('').map(d => `<div class="font-bold text-xs">${d}</div>`).join('');
+            const days = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
+            for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
+            for(let d=1; d<=days; d++) {
+                const evs = state.events.filter(e => e.m === month + 1 && e.d === d);
+                grid.innerHTML += `<div class="border rounded p-1 calendar-cell">${d}${evs.map(e => `<span class="event-tag">${e.label}</span>`).join('')}</div>`;
+            }
+        }
+
+        function changeMonth(delta) {
+            state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function saveSettings() {
+            localStorage.setItem('ghToken', document.getElementById('ghToken').value);
+            localStorage.setItem('ghUser', document.getElementById('ghUser').value);
+            localStorage.setItem('ghRepo', document.getElementById('ghRepo').value);
+            alert('保存しました');
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        // 初期ロード時に設定値を反映
+        window.onload = () => {
+            document.getElementById('ghToken').value = localStorage.getItem('ghToken') || '';
+            document.getElementById('ghUser').value = localStorage.getItem('ghUser') || '';
+            document.getElementById('ghRepo').value = localStorage.getItem('ghRepo') || '';
+            parseAndRender();
+        };
+
+        // GitHub API連携のプレースホルダー（簡易同期用）
+        async function syncWithGitHub() {
+            alert('同期機能: GitHub API (PUT) を実装することで schedule.txt へ保存されます。現在は設定を保存しました。');
+        }
+    </script>
+</body>
+</html>
