@@ -101,10 +101,10 @@ html, body {
   flex-shrink: 0;
 }
 .cal-weekday {
-  text-align: center;
+  text-align: left;
   font-size: 0.88rem;
   font-weight: 700;
-  padding: 4px 0;
+  padding: 4px 3px;
   color: var(--text-light);
   overflow: hidden;
 }
@@ -159,6 +159,7 @@ html, body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-left: 0;
 }
 
 .day-events {
@@ -184,6 +185,23 @@ html, body {
   text-overflow: ellipsis;
   line-height: 1.5;
   flex-shrink: 0;
+}
+
+
+/* ===== 祝日 ===== */
+.cal-cell.holiday .day-num { color: #c0392b; }
+.holiday-chip {
+  font-size: 0.6rem;
+  color: #c0392b;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+@media (min-width: 701px) {
+  .holiday-chip { font-size: 0.72rem; }
 }
 
 /* ===== テキストペイン ===== */
@@ -357,7 +375,7 @@ footer {
 @media (min-width: 701px) {
   html, body { font-family: var(--font-pc); font-size: 18px; }
   .cal-title { font-size: 1.4rem; }
-  .cal-weekday { font-size: 1rem; padding: 6px 0; font-weight: 700; }
+  .cal-weekday { font-size: 1rem; padding: 6px 3px; font-weight: 700; text-align: left; }
   .day-num { font-size: 1.15rem; width: 32px; height: 32px; }
   .event-chip { font-size: 0.88rem; padding: 2px 6px; }
   #schedule-text { font-size: 1.1rem; line-height: 2.2; }
@@ -396,7 +414,7 @@ footer {
   }
 
   /* スマホ：曜日文字小さく */
-  .cal-weekday { font-size: 0.72rem; padding: 3px 0; }
+  .cal-weekday { font-size: 0.72rem; padding: 3px 2px; text-align: left; }
 }
 </style>
 </head>
@@ -549,6 +567,111 @@ function parseSchedule(text) {
   return result;
 }
 
+
+// ===== 日本の祝日 =====
+// 固定祝日
+const FIXED_HOLIDAYS = {
+  '1-1':  '元日',
+  '2-11': '建国記念の日',
+  '2-23': '天皇誕生日',
+  '3-20': '春分の日',  // 近似値・毎年変動するが一般的な日付
+  '4-29': '昭和の日',
+  '5-3':  '憲法記念日',
+  '5-4':  'みどりの日',
+  '5-5':  'こどもの日',
+  '8-11': '山の日',
+  '9-23': '秋分の日',  // 近似値
+  '11-3': '文化の日',
+  '11-23':'勤労感謝の日',
+};
+
+// ハッピーマンデー（第n月曜日）
+const HAPPY_MONDAY = [
+  { month:1, nth:2, name:'成人の日' },
+  { month:7, nth:3, name:'海の日' },
+  { month:9, nth:3, name:'敬老の日' },
+  { month:10,nth:2, name:'スポーツの日' },
+];
+
+// 春分・秋分（天文計算近似）
+function getEquinox(year) {
+  const spring = Math.floor(20.8431 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
+  const autumn = Math.floor(23.2488 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
+  return { spring, autumn };
+}
+
+function getNthMonday(year, month, nth) {
+  let count = 0;
+  for (let d = 1; d <= 31; d++) {
+    const dt = new Date(year, month-1, d);
+    if (dt.getMonth() !== month-1) break;
+    if (dt.getDay() === 1) { count++; if (count === nth) return d; }
+  }
+  return null;
+}
+
+function getHolidaysForYear(year) {
+  const h = {};
+  const eq = getEquinox(year);
+
+  // 固定祝日
+  for (const [key, name] of Object.entries(FIXED_HOLIDAYS)) {
+    const [m, d] = key.split('-').map(Number);
+    h[toKey(year, m, d)] = name;
+  }
+  // 春分・秋分（計算値で上書き）
+  h[toKey(year, 3, eq.spring)] = '春分の日';
+  h[toKey(year, 9, eq.autumn)] = '秋分の日';
+
+  // ハッピーマンデー
+  for (const hm of HAPPY_MONDAY) {
+    const d = getNthMonday(year, hm.month, hm.nth);
+    if (d) h[toKey(year, hm.month, d)] = hm.name;
+  }
+
+  // 振替休日（日曜日が祝日 → 翌月曜日）
+  const keys = Object.keys(h);
+  const substitutes = {};
+  for (const k of keys) {
+    const dt = new Date(k);
+    if (dt.getDay() === 0) { // 日曜
+      let next = new Date(dt);
+      next.setDate(next.getDate() + 1);
+      // 連続祝日なら翌々日以降にずらす
+      while (h[toKey(next.getFullYear(), next.getMonth()+1, next.getDate())] ||
+             substitutes[toKey(next.getFullYear(), next.getMonth()+1, next.getDate())]) {
+        next.setDate(next.getDate() + 1);
+      }
+      substitutes[toKey(next.getFullYear(), next.getMonth()+1, next.getDate())] = '振替休日';
+    }
+  }
+  Object.assign(h, substitutes);
+
+  // 国民の祝日（祝日に挟まれた平日）
+  const allKeys = [...Object.keys(h), ...Object.keys(substitutes)].sort();
+  for (let m = 1; m <= 12; m++) {
+    const daysInMonth = new Date(year, m, 0).getDate();
+    for (let d = 2; d < daysInMonth; d++) {
+      const k = toKey(year, m, d);
+      if (h[k]) continue;
+      const dt = new Date(year, m-1, d);
+      if (dt.getDay() === 0 || dt.getDay() === 6) continue;
+      const prev = toKey(year, m, d-1);
+      const next = toKey(year, m, d+1);
+      if (h[prev] && h[next]) h[k] = '国民の祝日';
+    }
+  }
+
+  return h;
+}
+
+// 祝日キャッシュ
+const holidayCache = {};
+function getHoliday(year, month, day) {
+  if (!holidayCache[year]) holidayCache[year] = getHolidaysForYear(year);
+  return holidayCache[year][toKey(year, month, day)] || null;
+}
+
 // ===== カレンダー描画 =====
 function renderCalendar() {
   document.getElementById('cal-title').textContent = `${currentYear}年 ${currentMonth+1}月`;
@@ -590,9 +713,21 @@ function makeCell(year,month,day,other){
   const key=toKey(year,month,day);
   if(selectedDate===key)cell.classList.add('selected');
 
+  // 祝日判定
+  const holidayName = !other ? getHoliday(year,month,day) : null;
+  if(holidayName) cell.classList.add('holiday');
+
   const num=document.createElement('div');
   num.className='day-num'; num.textContent=day;
   cell.appendChild(num);
+
+  // 祝日名チップ
+  if(holidayName){
+    const hChip=document.createElement('div');
+    hChip.className='holiday-chip';
+    hChip.textContent=holidayName;
+    cell.appendChild(hChip);
+  }
 
   if(events[key]?.length){
     const evDiv=document.createElement('div');
