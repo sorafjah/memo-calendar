@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="カレンダー">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;カレンダー&quot;,&quot;short_name&quot;:&quot;カレンダー&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%23ffffff&quot;,&quot;theme_color&quot;:&quot;%23ffffff&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233a7bd5'/><text y='.9em' font-size='80' x='10'>📅</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
 <title>カレンダー</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,8 +21,8 @@
   --accent: #3a7bd5;
   --accent-light: #e8f0fb;
   --today-bg: #3a7bd5;
-  --event-color: #e05c2e;
-  --event-bg: #fde8df;
+  --event-color: #ffffff;
+  --event-bg: #c0392b;
   --font: "BIZ UDGothic", "BIZ UDP Gothic", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
 }
 
@@ -40,7 +42,7 @@ html, body {
   height: 100dvh;
 }
 
-/* ===== メインレイアウト（PC） ===== */
+/* ===== PC: 左テキスト1/3・右カレンダー2/3 ===== */
 .main {
   flex: 1;
   display: flex;
@@ -51,10 +53,10 @@ html, body {
 
 /* ===== カレンダーペイン ===== */
 .pane-calendar {
-  flex: 2; /* PC: 2/3 */
+  flex: 2;
   display: flex;
   flex-direction: column;
-  border-right: 2px solid var(--border);
+  border-left: 2px solid var(--border);
   background: var(--surface);
   overflow: hidden;
   min-width: 0;
@@ -79,25 +81,30 @@ html, body {
   font-family: var(--font);
   -webkit-tap-highlight-color: transparent;
 }
-.cal-title {
-  font-size: 1.15rem;
-  font-weight: 700;
+.cal-title { font-size: 1.15rem; font-weight: 700; }
+
+/* 曜日ヘッダーとグリッドは同じ padding で揃える */
+.cal-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  padding: 4px;          /* ← ここだけ */
 }
 
-/* 曜日ヘッダー */
 .cal-weekdays {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   flex-shrink: 0;
-  padding: 0 4px;
 }
 .cal-weekday {
   text-align: center;
   font-size: 0.88rem;
   font-weight: 700;
-  padding: 6px 0;
+  padding: 4px 0;
   color: var(--text-light);
-  min-width: 0;
+  overflow: hidden;
 }
 .cal-weekday:first-child { color: #c0392b; }
 .cal-weekday:last-child  { color: #2980b9; }
@@ -106,33 +113,32 @@ html, body {
 .cal-swipe-wrapper {
   flex: 1;
   min-height: 0;
-  padding: 0 4px 4px;
   touch-action: pan-y;
+  overflow: hidden;
 }
 
 /* セルグリッド */
 .cal-days {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(7, 1fr);
   height: 100%;
   gap: 2px;
 }
 
 /* ===== カレンダーセル ===== */
 .cal-cell {
-  border-radius: 6px;
-  padding: 4px 4px;
+  border-radius: 5px;
+  padding: 3px;
   cursor: pointer;
   border: 1px solid transparent;
-  min-width: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   -webkit-tap-highlight-color: transparent;
 }
 .cal-cell:active { background: var(--accent-light); }
-.cal-cell.other-month { opacity: 0.3; }
+.cal-cell.other-month { opacity: 0.28; }
 .cal-cell.today .day-num {
   background: var(--today-bg);
   color: #fff;
@@ -145,8 +151,8 @@ html, body {
 .day-num {
   font-size: 1rem;
   font-weight: 600;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -161,12 +167,15 @@ html, body {
   min-height: 0;
   flex: 1;
 }
+
+/* PCチップ：背景を濃く、文字を白く、フォント大きく */
 .event-chip {
   font-size: 0.78rem;
+  font-weight: 600;
   background: var(--event-bg);
   color: var(--event-color);
   border-radius: 3px;
-  padding: 1px 4px;
+  padding: 2px 5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -176,7 +185,7 @@ html, body {
 
 /* ===== テキストペイン ===== */
 .pane-text {
-  flex: 1; /* PC: 1/3 */
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -209,10 +218,7 @@ footer {
   justify-content: space-between;
   flex-shrink: 0;
 }
-.sync-status {
-  font-size: 0.75rem;
-  color: var(--text-light);
-}
+.sync-status { font-size: 0.75rem; color: var(--text-light); }
 .btn-settings {
   background: none;
   border: 1px solid var(--border);
@@ -253,16 +259,12 @@ footer {
 }
 .popup-event-list li::before {
   content: "●";
-  color: var(--event-color);
+  color: #c0392b;
   font-size: 0.5rem;
   position: absolute;
   left: 0; top: 8px;
 }
-.popup-add {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
+.popup-add { display: flex; gap: 6px; margin-top: 8px; }
 .popup-add input {
   flex: 1;
   padding: 7px 10px;
@@ -283,11 +285,7 @@ footer {
   cursor: pointer;
   font-weight: 600;
 }
-.popup-bottom {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
+.popup-bottom { display: flex; justify-content: flex-end; margin-top: 12px; }
 .popup-close {
   padding: 6px 18px;
   background: var(--border);
@@ -344,56 +342,46 @@ footer {
 .form-note { font-size: 0.72rem; color: var(--text-light); margin-top: 2px; }
 .modal-buttons { display: flex; gap: 8px; margin-top: 16px; }
 .btn {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
+  flex: 1; padding: 10px; border: none;
+  border-radius: 8px; font-family: var(--font);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
 }
 .btn-primary  { background: var(--accent); color: #fff; }
 .btn-secondary { background: var(--border); color: var(--text); }
 
 /* ===== スマホ ===== */
 @media (max-width: 700px) {
-  .day-num {
-    font-size: 0.75rem;
-    width: 20px;
-    height: 20px;
-  }
-  .event-chip {
-    font-size: 0.6rem;
-    padding: 0 2px;
-  }
-  .cal-weekday {
-    font-size: 0.7rem;
-    padding: 3px 0;
-  }
-}
-@media (max-width: 700px) {
-  .main {
-    flex-direction: column;
-  }
-  /* カレンダーが上 */
+  .main { flex-direction: column; }
+
   .pane-calendar {
     flex: none;
     height: 58vh;
-    min-height: 300px;
-    border-right: none;
+    min-height: 280px;
+    border-left: none;
     border-bottom: 2px solid var(--border);
+    /* スマホは padding を小さく */
   }
-  /* テキストが下 */
-  .pane-text {
-    flex: 1;
-    min-height: 100px;
-  }
+  .cal-inner { padding: 2px; }
+
+  .pane-text { flex: 1; min-height: 100px; }
   #schedule-text { font-size: 0.92rem; }
+
+  /* スマホ：日付数字小さく */
+  .day-num { font-size: 0.8rem; width: 20px; height: 20px; }
+
+  /* スマホ：チップは赤枠テキストに変える（背景より見やすい） */
   .event-chip {
-    /* スマホはセル幅が狭いので先頭5文字 */
-    max-width: 100%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    background: transparent;
+    color: #c0392b;
+    border: 1px solid #e8a090;
+    padding: 0 2px;
+    line-height: 1.4;
   }
+
+  /* スマホ：曜日文字小さく */
+  .cal-weekday { font-size: 0.72rem; padding: 3px 0; }
 }
 </style>
 </head>
@@ -401,31 +389,33 @@ footer {
 <div class="app">
   <div class="main">
 
-    <!-- カレンダー -->
+    <!-- テキスト（PC左） -->
+    <div class="pane-text">
+      <textarea id="schedule-text"
+        placeholder="6/5 生徒会選挙ポスター&#10;6/23火 創立記念日&#10;10/7〜10/9 修学旅行"></textarea>
+    </div>
+
+    <!-- カレンダー（PC右・スマホ上） -->
     <div class="pane-calendar">
       <div class="cal-nav">
         <button id="btn-prev">&#8249;</button>
         <span class="cal-title" id="cal-title"></span>
         <button id="btn-next">&#8250;</button>
       </div>
-      <div class="cal-weekdays">
-        <div class="cal-weekday">日</div>
-        <div class="cal-weekday">月</div>
-        <div class="cal-weekday">火</div>
-        <div class="cal-weekday">水</div>
-        <div class="cal-weekday">木</div>
-        <div class="cal-weekday">金</div>
-        <div class="cal-weekday">土</div>
+      <div class="cal-inner">
+        <div class="cal-weekdays">
+          <div class="cal-weekday">日</div>
+          <div class="cal-weekday">月</div>
+          <div class="cal-weekday">火</div>
+          <div class="cal-weekday">水</div>
+          <div class="cal-weekday">木</div>
+          <div class="cal-weekday">金</div>
+          <div class="cal-weekday">土</div>
+        </div>
+        <div class="cal-swipe-wrapper" id="cal-swipe-wrapper">
+          <div class="cal-days" id="cal-days"></div>
+        </div>
       </div>
-      <div class="cal-swipe-wrapper" id="cal-swipe-wrapper">
-        <div class="cal-days" id="cal-days"></div>
-      </div>
-    </div>
-
-    <!-- テキスト -->
-    <div class="pane-text">
-      <textarea id="schedule-text"
-        placeholder="6/5 生徒会選挙ポスター&#10;6/23火 創立記念日&#10;10/7〜10/9 修学旅行"></textarea>
     </div>
 
   </div>
@@ -457,20 +447,20 @@ footer {
     <h2>GitHub設定</h2>
     <div class="form-group">
       <label>GitHubユーザー名</label>
-      <input type="text" id="gh-user" placeholder="例: sorafjah" autocomplete="off">
+      <input type="text" id="gh-user" autocomplete="off">
     </div>
     <div class="form-group">
       <label>リポジトリ名</label>
-      <input type="text" id="gh-repo" placeholder="例: my-schedule" autocomplete="off">
+      <input type="text" id="gh-repo" autocomplete="off">
     </div>
     <div class="form-group">
       <label>ファイルパス</label>
-      <input type="text" id="gh-path" placeholder="例: schedule.txt" autocomplete="off">
+      <input type="text" id="gh-path" placeholder="schedule.txt" autocomplete="off">
     </div>
     <div class="form-group">
       <label>Personal Access Token</label>
-      <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
-      <div class="form-note">ブラウザのlocalStorageのみに保存。外部送信なし。</div>
+      <input type="password" id="gh-token" autocomplete="off">
+      <div class="form-note">localStorageのみに保存。外部送信なし。</div>
     </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" id="modal-cancel">キャンセル</button>
@@ -490,347 +480,268 @@ const SAMPLE = `6/5生徒会選挙ポスター
 11/27金　生徒会選挙`;
 
 let currentYear  = new Date().getFullYear();
-let currentMonth = new Date().getMonth(); // 0-indexed
+let currentMonth = new Date().getMonth();
 let events = {};
 let selectedDate = null;
 let autoSaveTimer = null;
 let popupDateKey = null, popupYear, popupMonth, popupDay;
-let isMobile = () => window.innerWidth <= 700;
+const isMobile = () => window.innerWidth <= 700;
 
-// ===== ユーティリティ =====
 function toKey(y, m, d) {
   return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 function guessYear(mo, da) {
-  const now = new Date();
-  const y = now.getFullYear();
+  const now = new Date(), y = now.getFullYear();
   const d1 = new Date(y, mo-1, da);
-  const threshold = new Date(now);
-  threshold.setMonth(threshold.getMonth() - 3);
-  return d1 < threshold ? y+1 : y;
+  const thr = new Date(now); thr.setMonth(thr.getMonth()-3);
+  return d1 < thr ? y+1 : y;
 }
 
-// ===== テキスト解析 =====
+// ===== 解析 =====
 function parseSchedule(text) {
   const result = {};
-  const patterns = [
-    {
-      re: /^(\d{1,2})[\/月](\d{1,2})[日]?\s*[〜～\-]\s*(\d{1,2})[\/月](\d{1,2})[日]?\s*(.*)/,
-      fn(m, li) {
-        let [,m1,d1,m2,d2,title] = m;
-        [m1,d1,m2,d2] = [+m1,+d1,+m2,+d2];
-        title = title.trim() || '（予定）';
-        if (m1<1||m1>12||d1<1||d1>31||m2<1||m2>12||d2<1||d2>31) return;
-        const y1 = guessYear(m1,d1);
-        const y2 = m2 < m1 ? y1+1 : y1;
-        let cur = new Date(y1, m1-1, d1);
-        const end = new Date(y2, m2-1, d2);
-        for (let n=0; cur<=end && n<400; n++, cur.setDate(cur.getDate()+1)) {
-          const k = toKey(cur.getFullYear(), cur.getMonth()+1, cur.getDate());
-          (result[k] = result[k]||[]).push({title, lineIndex:li});
+  const pats = [
+    { re: /^(\d{1,2})[\/月](\d{1,2})[日]?\s*[〜～\-]\s*(\d{1,2})[\/月](\d{1,2})[日]?\s*(.*)/,
+      fn(m,li){ let [,m1,d1,m2,d2,t]=[...m]; [m1,d1,m2,d2]=[+m1,+d1,+m2,+d2]; t=t.trim()||'（予定）';
+        if(m1<1||m1>12||d1<1||d1>31||m2<1||m2>12||d2<1||d2>31)return;
+        const y1=guessYear(m1,d1), y2=m2<m1?y1+1:y1;
+        let c=new Date(y1,m1-1,d1); const e=new Date(y2,m2-1,d2);
+        for(let n=0;c<=e&&n<400;n++,c.setDate(c.getDate()+1)){
+          const k=toKey(c.getFullYear(),c.getMonth()+1,c.getDate());
+          (result[k]=result[k]||[]).push({title:t,lineIndex:li});
         }
       }
     },
-    {
-      re: /^(\d{1,2})月(\d{1,2})日[（(]?[月火水木金土日]?[）)]?\s*(.*)/,
-      fn(m, li) {
-        const mo=+m[1], da=+m[2], title=m[3].trim()||'（予定）';
-        if (mo<1||mo>12||da<1||da>31) return;
-        const k = toKey(guessYear(mo,da), mo, da);
-        (result[k]=result[k]||[]).push({title, lineIndex:li});
+    { re: /^(\d{1,2})月(\d{1,2})日[（(]?[月火水木金土日]?[）)]?\s*(.*)/,
+      fn(m,li){ const mo=+m[1],da=+m[2],t=m[3].trim()||'（予定）';
+        if(mo<1||mo>12||da<1||da>31)return;
+        const k=toKey(guessYear(mo,da),mo,da);
+        (result[k]=result[k]||[]).push({title:t,lineIndex:li});
       }
     },
-    {
-      re: /^(\d{1,2})\/(\d{1,2})[月火水木金土日]?\s*(.*)/,
-      fn(m, li) {
-        const mo=+m[1], da=+m[2], title=m[3].trim()||'（予定）';
-        if (mo<1||mo>12||da<1||da>31) return;
-        const k = toKey(guessYear(mo,da), mo, da);
-        (result[k]=result[k]||[]).push({title, lineIndex:li});
+    { re: /^(\d{1,2})\/(\d{1,2})[月火水木金土日]?\s*(.*)/,
+      fn(m,li){ const mo=+m[1],da=+m[2],t=m[3].trim()||'（予定）';
+        if(mo<1||mo>12||da<1||da>31)return;
+        const k=toKey(guessYear(mo,da),mo,da);
+        (result[k]=result[k]||[]).push({title:t,lineIndex:li});
       }
     },
   ];
-  text.split('\n').forEach((raw, li) => {
-    const line = raw.trim();
-    if (!line) return;
-    for (const p of patterns) {
-      const m = line.match(p.re);
-      if (m) { p.fn(m, li); break; }
-    }
+  text.split('\n').forEach((raw,li)=>{
+    const line=raw.trim(); if(!line)return;
+    for(const p of pats){ const m=line.match(p.re); if(m){p.fn(m,li);break;} }
   });
   return result;
 }
 
 // ===== カレンダー描画 =====
 function renderCalendar() {
-  document.getElementById('cal-title').textContent =
-    `${currentYear}年 ${currentMonth+1}月`;
+  document.getElementById('cal-title').textContent = `${currentYear}年 ${currentMonth+1}月`;
   const container = document.getElementById('cal-days');
   container.innerHTML = '';
-
-  const today    = new Date();
+  const today = new Date();
   const firstDay = new Date(currentYear, currentMonth, 1);
   const lastDay  = new Date(currentYear, currentMonth+1, 0);
   const startDow = firstDay.getDay();
-
-  // 前月埋め
   const prevLast = new Date(currentYear, currentMonth, 0);
-  for (let i=startDow-1; i>=0; i--) {
-    const d = prevLast.getDate()-i;
-    const mo = currentMonth===0 ? 12 : currentMonth;
-    const yr = currentMonth===0 ? currentYear-1 : currentYear;
-    container.appendChild(makeCell(yr, mo, d, true));
-  }
-  // 当月
-  for (let d=1; d<=lastDay.getDate(); d++)
-    container.appendChild(makeCell(currentYear, currentMonth+1, d, false));
-  // 翌月埋め（6行固定になるよう）
-  const endDow = lastDay.getDay();
-  const filled = startDow + lastDay.getDate() + (6-endDow);
-  const total  = filled <= 35 ? 35 : 42;
-  const trailing = total - startDow - lastDay.getDate();
-  const nextMo = currentMonth===11 ? 1  : currentMonth+2;
-  const nextYr = currentMonth===11 ? currentYear+1 : currentYear;
-  for (let d=1; d<=trailing; d++)
-    container.appendChild(makeCell(nextYr, nextMo, d, true));
 
-  // grid-template-rows を行数に合わせる
-  const rows = total / 7;
-  container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  for(let i=startDow-1;i>=0;i--){
+    const d=prevLast.getDate()-i;
+    const mo=currentMonth===0?12:currentMonth;
+    const yr=currentMonth===0?currentYear-1:currentYear;
+    container.appendChild(makeCell(yr,mo,d,true));
+  }
+  for(let d=1;d<=lastDay.getDate();d++)
+    container.appendChild(makeCell(currentYear,currentMonth+1,d,false));
+  const endDow=lastDay.getDay();
+  const total=(startDow+lastDay.getDate()+6-endDow)<=35?35:42;
+  const trailing=total-startDow-lastDay.getDate();
+  const nMo=currentMonth===11?1:currentMonth+2;
+  const nYr=currentMonth===11?currentYear+1:currentYear;
+  for(let d=1;d<=trailing;d++)
+    container.appendChild(makeCell(nYr,nMo,d,true));
+  container.style.gridTemplateRows=`repeat(${total/7},1fr)`;
 }
 
-function makeCell(year, month, day, other) {
-  const cell = document.createElement('div');
-  cell.className = 'cal-cell' + (other ? ' other-month' : '');
-  const dow = new Date(year, month-1, day).getDay();
-  if (dow===0) cell.classList.add('sunday');
-  if (dow===6) cell.classList.add('saturday');
-  const today = new Date();
-  if (!other && year===today.getFullYear() && month===today.getMonth()+1 && day===today.getDate())
+function makeCell(year,month,day,other){
+  const cell=document.createElement('div');
+  cell.className='cal-cell'+(other?' other-month':'');
+  const dow=new Date(year,month-1,day).getDay();
+  if(dow===0)cell.classList.add('sunday');
+  if(dow===6)cell.classList.add('saturday');
+  const today=new Date();
+  if(!other&&year===today.getFullYear()&&month===today.getMonth()+1&&day===today.getDate())
     cell.classList.add('today');
-  const key = toKey(year, month, day);
-  if (selectedDate===key) cell.classList.add('selected');
+  const key=toKey(year,month,day);
+  if(selectedDate===key)cell.classList.add('selected');
 
-  const num = document.createElement('div');
-  num.className = 'day-num';
-  num.textContent = day;
+  const num=document.createElement('div');
+  num.className='day-num'; num.textContent=day;
   cell.appendChild(num);
 
-  if (events[key]?.length) {
-    const evDiv = document.createElement('div');
-    evDiv.className = 'day-events';
-    const mobile = isMobile();
-    events[key].slice(0,2).forEach(ev => {
-      const chip = document.createElement('div');
-      chip.className = 'event-chip';
-      // スマホは5文字、PCは制限なし
-      chip.textContent = mobile && ev.title.length>5
-        ? ev.title.slice(0,5)+'…'
-        : ev.title;
+  if(events[key]?.length){
+    const evDiv=document.createElement('div');
+    evDiv.className='day-events';
+    const mobile=isMobile();
+    events[key].slice(0,2).forEach(ev=>{
+      const chip=document.createElement('div');
+      chip.className='event-chip';
+      chip.textContent=mobile&&ev.title.length>5?ev.title.slice(0,5)+'…':ev.title;
       evDiv.appendChild(chip);
     });
-    if (events[key].length > 2) {
-      const more = document.createElement('div');
-      more.className = 'event-chip';
-      more.textContent = `+${events[key].length-2}`;
+    if(events[key].length>2){
+      const more=document.createElement('div');
+      more.className='event-chip';
+      more.textContent=`+${events[key].length-2}`;
       evDiv.appendChild(more);
     }
     cell.appendChild(evDiv);
   }
-  cell.addEventListener('click', () => openPopup(key, year, month, day));
+  cell.addEventListener('click',()=>openPopup(key,year,month,day));
   return cell;
 }
 
 // ===== ポップアップ =====
-function openPopup(key, year, month, day) {
-  selectedDate = key;
-  popupDateKey = key; popupYear=year; popupMonth=month; popupDay=day;
-  document.getElementById('popup-date').textContent = `${year}年${month}月${day}日`;
+function openPopup(key,year,month,day){
+  selectedDate=key; popupDateKey=key; popupYear=year; popupMonth=month; popupDay=day;
+  document.getElementById('popup-date').textContent=`${year}年${month}月${day}日`;
   renderPopupEvents();
-  document.getElementById('popup-input').value = '';
+  document.getElementById('popup-input').value='';
   document.getElementById('popup').classList.remove('hidden');
   renderCalendar();
 }
-function renderPopupEvents() {
-  const list = document.getElementById('popup-events');
-  list.innerHTML = '';
-  (events[popupDateKey]||[]).forEach(ev => {
-    const li = document.createElement('li');
-    li.textContent = ev.title;
-    li.addEventListener('click', () => { closePopup(); highlightLine(ev.lineIndex); });
+function renderPopupEvents(){
+  const list=document.getElementById('popup-events');
+  list.innerHTML='';
+  (events[popupDateKey]||[]).forEach(ev=>{
+    const li=document.createElement('li');
+    li.textContent=ev.title;
+    li.addEventListener('click',()=>{closePopup();highlightLine(ev.lineIndex);});
     list.appendChild(li);
   });
 }
-function closePopup() {
+function closePopup(){
   document.getElementById('popup').classList.add('hidden');
-  popupDateKey = null;
+  popupDateKey=null;
 }
-function addEventFromPopup() {
-  const input = document.getElementById('popup-input');
-  const title = input.value.trim();
-  if (!title || !popupDateKey) return;
-  const newLine = `${popupMonth}/${popupDay} ${title}`;
-  const ta = document.getElementById('schedule-text');
-  ta.value = ta.value ? ta.value + '\n' + newLine : newLine;
-  events = parseSchedule(ta.value);
-  renderCalendar();
-  renderPopupEvents();
-  input.value = '';
-  scheduleAutoSave();
+function addEventFromPopup(){
+  const input=document.getElementById('popup-input');
+  const title=input.value.trim();
+  if(!title||!popupDateKey)return;
+  const ta=document.getElementById('schedule-text');
+  const newLine=`${popupMonth}/${popupDay} ${title}`;
+  ta.value=ta.value?ta.value+'\n'+newLine:newLine;
+  events=parseSchedule(ta.value);
+  renderCalendar(); renderPopupEvents();
+  input.value=''; scheduleAutoSave();
 }
-function highlightLine(idx) {
-  const ta = document.getElementById('schedule-text');
-  const lines = ta.value.split('\n');
-  let pos = 0;
-  for (let i=0; i<idx; i++) pos += lines[i].length+1;
-  const end = pos + (lines[idx]||'').length;
-  ta.focus();
-  ta.setSelectionRange(pos, end);
-  ta.scrollTop = idx * (0.95*16*2.1) - 40;
+function highlightLine(idx){
+  const ta=document.getElementById('schedule-text');
+  const lines=ta.value.split('\n');
+  let pos=0; for(let i=0;i<idx;i++)pos+=lines[i].length+1;
+  const end=pos+(lines[idx]||'').length;
+  ta.focus(); ta.setSelectionRange(pos,end);
+  ta.scrollTop=idx*(0.95*16*2.1)-40;
 }
 
 // ===== 自動保存 =====
-function scheduleAutoSave() {
+function scheduleAutoSave(){
   clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(syncSave, 2000);
+  autoSaveTimer=setTimeout(syncSave,2000);
 }
-function onTextChange() {
-  events = parseSchedule(document.getElementById('schedule-text').value);
-  renderCalendar();
-  scheduleAutoSave();
+function onTextChange(){
+  events=parseSchedule(document.getElementById('schedule-text').value);
+  renderCalendar(); scheduleAutoSave();
 }
 
 // ===== スワイプ（閾値80px） =====
-let touchStartX=0, touchStartY=0;
-document.getElementById('cal-swipe-wrapper').addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-}, {passive:true});
-document.getElementById('cal-swipe-wrapper').addEventListener('touchend', e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 80) {
-    dx < 0 ? goNext() : goPrev();
-  }
-}, {passive:true});
-function goPrev() {
-  if (--currentMonth < 0) { currentMonth=11; currentYear--; }
-  renderCalendar();
-}
-function goNext() {
-  if (++currentMonth > 11) { currentMonth=0; currentYear++; }
-  renderCalendar();
-}
+let tx=0,ty=0;
+document.addEventListener('DOMContentLoaded',()=>{
+  const sw=document.getElementById('cal-swipe-wrapper');
+  sw.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
+  sw.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>80){ dx<0?goNext():goPrev(); }
+  },{passive:true});
+});
+function goPrev(){ if(--currentMonth<0){currentMonth=11;currentYear--;} renderCalendar(); }
+function goNext(){ if(++currentMonth>11){currentMonth=0;currentYear++;} renderCalendar(); }
 
 // ===== GitHub =====
-const GH_KEYS = ['gh-user','gh-repo','gh-path','gh-token'];
-function loadGhSettings() {
-  GH_KEYS.forEach(k => {
-    const v = localStorage.getItem(k);
-    if (v) document.getElementById(k).value = v;
-  });
-}
-function saveGhSettings() {
-  GH_KEYS.forEach(k => localStorage.setItem(k, document.getElementById(k).value));
-  document.getElementById('modal-github').classList.add('hidden');
-  syncLoad();
-}
-function getGhConfig() {
-  return {
-    user:  localStorage.getItem('gh-user')||'',
-    repo:  localStorage.getItem('gh-repo')||'',
-    path:  localStorage.getItem('gh-path')||'schedule.txt',
-    token: localStorage.getItem('gh-token')||'',
-  };
-}
-function isGhConfigured() {
-  const c = getGhConfig();
-  return c.user && c.repo && c.token;
-}
-async function ghFetch(text) {
-  const c = getGhConfig();
-  const url = `https://api.github.com/repos/${c.user}/${c.repo}/contents/${c.path}`;
-  const headers = {
-    'Authorization': `token ${c.token}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json',
-  };
-  let sha = '';
-  try {
-    const r = await fetch(url, {headers});
-    if (r.ok) {
-      const d = await r.json();
-      sha = d.sha;
-      if (text===null)
-        return decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));
-    }
-  } catch(e){}
-  if (text===null) return null;
-  const body = {
-    message: 'Update schedule',
-    content: btoa(unescape(encodeURIComponent(text))),
-  };
-  if (sha) body.sha = sha;
-  const r = await fetch(url, {method:'PUT', headers, body:JSON.stringify(body)});
+const GH_KEYS=['gh-user','gh-repo','gh-path','gh-token'];
+function loadGhSettings(){ GH_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v)document.getElementById(k).value=v;}); }
+function saveGhSettings(){ GH_KEYS.forEach(k=>localStorage.setItem(k,document.getElementById(k).value)); document.getElementById('modal-github').classList.add('hidden'); syncLoad(); }
+function getGhConfig(){ return {user:localStorage.getItem('gh-user')||'',repo:localStorage.getItem('gh-repo')||'',path:localStorage.getItem('gh-path')||'schedule.txt',token:localStorage.getItem('gh-token')||''}; }
+function isGhConfigured(){ const c=getGhConfig(); return c.user&&c.repo&&c.token; }
+
+async function ghFetch(text){
+  const c=getGhConfig();
+  const url=`https://api.github.com/repos/${c.user}/${c.repo}/contents/${c.path}`;
+  const headers={'Authorization':`token ${c.token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+  let sha='';
+  try{
+    const r=await fetch(url,{headers});
+    if(r.ok){const d=await r.json();sha=d.sha;if(text===null)return decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));}
+  }catch(e){}
+  if(text===null)return null;
+  const body={message:'Update schedule',content:btoa(unescape(encodeURIComponent(text)))};
+  if(sha)body.sha=sha;
+  const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
   return r.ok;
 }
-function setStatus(msg, ok=true) {
-  const el = document.getElementById('sync-status');
-  el.textContent = msg;
-  el.style.color = ok ? '#27ae60' : '#e74c3c';
-  if (msg) setTimeout(()=>{ el.textContent=''; }, 3000);
+
+function setStatus(msg,ok=true){
+  const el=document.getElementById('sync-status');
+  el.textContent=msg; el.style.color=ok?'#27ae60':'#e74c3c';
+  if(msg)setTimeout(()=>{el.textContent='';},3000);
 }
-async function syncLoad() {
-  if (!isGhConfigured()) return;
-  setStatus('読込中…');
-  try {
-    const text = await ghFetch(null);
-    if (text!==null) {
-      document.getElementById('schedule-text').value = text;
-      events = parseSchedule(text);
-      renderCalendar();
-      setStatus('読込完了');
-    } else { setStatus(''); }
-  } catch(e) { setStatus('読込失敗', false); }
+async function syncLoad(){
+  if(!isGhConfigured())return; setStatus('読込中…');
+  try{
+    const text=await ghFetch(null);
+    if(text!==null){document.getElementById('schedule-text').value=text;events=parseSchedule(text);renderCalendar();setStatus('読込完了');}
+    else setStatus('');
+  }catch(e){setStatus('読込失敗',false);}
 }
-async function syncSave() {
-  if (!isGhConfigured()) return;
-  setStatus('保存中…');
-  try {
-    const text = document.getElementById('schedule-text').value;
-    const ok = await ghFetch(text);
-    setStatus(ok ? '保存完了' : '保存失敗', !!ok);
-  } catch(e) { setStatus('保存失敗', false); }
+async function syncSave(){
+  if(!isGhConfigured())return; setStatus('保存中…');
+  try{
+    const ok=await ghFetch(document.getElementById('schedule-text').value);
+    setStatus(ok?'保存完了':'保存失敗',!!ok);
+  }catch(e){setStatus('保存失敗',false);}
 }
 
 // ===== 初期化 =====
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('schedule-text').value = SAMPLE;
-  events = parseSchedule(SAMPLE);
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('schedule-text').value=SAMPLE;
+  events=parseSchedule(SAMPLE);
   renderCalendar();
 
-  document.getElementById('schedule-text').addEventListener('input', onTextChange);
-  document.getElementById('btn-prev').addEventListener('click', goPrev);
-  document.getElementById('btn-next').addEventListener('click', goNext);
-
-  document.getElementById('btn-settings').addEventListener('click', () => {
-    loadGhSettings();
-    document.getElementById('modal-github').classList.remove('hidden');
-  });
-  document.getElementById('modal-cancel').addEventListener('click', () =>
-    document.getElementById('modal-github').classList.add('hidden'));
-  document.getElementById('modal-save').addEventListener('click', saveGhSettings);
-
-  document.getElementById('popup-close').addEventListener('click', closePopup);
-  document.getElementById('popup').addEventListener('click', e => {
-    if (e.target===document.getElementById('popup')) closePopup();
-  });
-  document.getElementById('popup-add-btn').addEventListener('click', addEventFromPopup);
-  document.getElementById('popup-input').addEventListener('keydown', e => {
-    if (e.key==='Enter') addEventFromPopup();
-  });
+  document.getElementById('schedule-text').addEventListener('input',onTextChange);
+  document.getElementById('btn-prev').addEventListener('click',goPrev);
+  document.getElementById('btn-next').addEventListener('click',goNext);
+  document.getElementById('btn-settings').addEventListener('click',()=>{loadGhSettings();document.getElementById('modal-github').classList.remove('hidden');});
+  document.getElementById('modal-cancel').addEventListener('click',()=>document.getElementById('modal-github').classList.add('hidden'));
+  document.getElementById('modal-save').addEventListener('click',saveGhSettings);
+  document.getElementById('popup-close').addEventListener('click',closePopup);
+  document.getElementById('popup').addEventListener('click',e=>{if(e.target===document.getElementById('popup'))closePopup();});
+  document.getElementById('popup-add-btn').addEventListener('click',addEventFromPopup);
+  document.getElementById('popup-input').addEventListener('keydown',e=>{if(e.key==='Enter')addEventFromPopup();});
 
   syncLoad();
+
+  // PWA Service Worker
+  if('serviceWorker' in navigator){
+    const sw=`
+self.addEventListener('install',e=>e.waitUntil(
+  caches.open('cal-v1').then(c=>c.addAll([location.href]))
+));
+self.addEventListener('fetch',e=>e.respondWith(
+  caches.match(e.request).then(r=>r||fetch(e.request))
+));`;
+    const blob=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'}).catch(()=>{});
+  }
 });
 </script>
 </body>
