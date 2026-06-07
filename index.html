@@ -26,6 +26,9 @@
   --event-border: #5bb8f5;
   --font: "BIZ UDGothic", "BIZ UDP Gothic", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
   --font-pc: Arial, "Hiragino Kaku Gothic ProN", sans-serif;
+  /* 曜日ヘッダーと日付数字を揃えるための共通左余白 */
+  --cell-pad: 3px;
+  --daynum-w: 26px;
 }
 
 html, body {
@@ -44,7 +47,6 @@ html, body {
   height: 100dvh;
 }
 
-/* ===== PC: 左テキスト1/3・右カレンダー2/3 ===== */
 .main {
   flex: 1;
   display: flex;
@@ -85,33 +87,37 @@ html, body {
 }
 .cal-title { font-size: 1.15rem; font-weight: 700; }
 
-/* 曜日ヘッダーとグリッドは同じ padding で揃える */
 .cal-inner {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
-  padding: 4px;          /* ← ここだけ */
+  padding: 4px;
 }
 
+/* 曜日ヘッダー：セルと同じ padding + daynum 分の左余白で数字と揃える */
 .cal-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   flex-shrink: 0;
 }
 .cal-weekday {
-  text-align: left;
   font-size: 0.88rem;
   font-weight: 700;
-  padding: 4px 3px;
+  /* セルと同じ padding の左余白 + (daynum幅の中央に来る位置) */
+  padding: 4px var(--cell-pad);
+  /* daynum は幅 26px で中央揃え → テキストを同じ幅の中央に */
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: calc(var(--daynum-w));
   color: var(--text-light);
   overflow: hidden;
 }
 .cal-weekday:first-child { color: #c0392b; }
 .cal-weekday:last-child  { color: #2980b9; }
 
-/* スワイプラッパー */
 .cal-swipe-wrapper {
   flex: 1;
   min-height: 0;
@@ -119,7 +125,6 @@ html, body {
   overflow: hidden;
 }
 
-/* セルグリッド */
 .cal-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -130,7 +135,7 @@ html, body {
 /* ===== カレンダーセル ===== */
 .cal-cell {
   border-radius: 5px;
-  padding: 3px;
+  padding: var(--cell-pad);
   cursor: pointer;
   border: 1px solid transparent;
   overflow: hidden;
@@ -146,20 +151,20 @@ html, body {
   color: #fff;
   border-radius: 50%;
 }
-.cal-cell.selected { border-color: var(--accent); background: var(--accent-light); }
+/* selected の青ハイライト削除 */
+/* .cal-cell.selected { border-color: var(--accent); background: var(--accent-light); } */
 .cal-cell.sunday  .day-num { color: #c0392b; }
 .cal-cell.saturday .day-num { color: #2980b9; }
 
 .day-num {
   font-size: 1rem;
   font-weight: 600;
-  width: 26px;
+  width: var(--daynum-w);
   height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-left: 0;
 }
 
 .day-events {
@@ -171,7 +176,6 @@ html, body {
   flex: 1;
 }
 
-/* PCチップ：背景を濃く、文字を白く、フォント大きく */
 .event-chip {
   font-size: 0.78rem;
   font-weight: 600;
@@ -186,7 +190,6 @@ html, body {
   line-height: 1.5;
   flex-shrink: 0;
 }
-
 
 /* ===== 祝日 ===== */
 .cal-cell.holiday .day-num { color: #c0392b; }
@@ -375,7 +378,8 @@ footer {
 @media (min-width: 701px) {
   html, body { font-family: var(--font-pc); font-size: 18px; }
   .cal-title { font-size: 1.4rem; }
-  .cal-weekday { font-size: 1rem; padding: 6px 3px; font-weight: 700; text-align: left; }
+  .cal-weekday { font-size: 1rem; padding: 6px var(--cell-pad); font-weight: 700; }
+  :root { --daynum-w: 32px; }
   .day-num { font-size: 1.15rem; width: 32px; height: 32px; }
   .event-chip { font-size: 0.88rem; padding: 2px 6px; }
   #schedule-text { font-size: 1.1rem; line-height: 2.2; }
@@ -388,21 +392,26 @@ footer {
 
   .pane-calendar {
     flex: none;
-    height: 58vh;
-    min-height: 280px;
+    /* 58vh → 46vh に縮小してメモ領域を広げる */
+    height: 46vh;
+    min-height: 260px;
     border-right: none;
     border-bottom: 2px solid var(--border);
-    /* スマホは padding を小さく */
   }
   .cal-inner { padding: 2px; }
 
   .pane-text { flex: 1; min-height: 100px; }
-  #schedule-text { font-size: 0.92rem; }
+  /* スマホメモのフォントを大きく */
+  #schedule-text { font-size: 1.05rem; line-height: 2.2; }
 
   /* スマホ：日付数字小さく */
+  :root { --daynum-w: 20px; }
   .day-num { font-size: 0.8rem; width: 20px; height: 20px; }
 
-  /* スマホ：チップは赤枠テキストに変える（背景より見やすい） */
+  /* スマホ：曜日文字小さく */
+  .cal-weekday { font-size: 0.72rem; padding: 3px var(--cell-pad); width: var(--daynum-w); }
+
+  /* スマホ：チップは赤枠テキストに変える */
   .event-chip {
     font-size: 0.6rem;
     font-weight: 700;
@@ -412,9 +421,6 @@ footer {
     padding: 0 2px;
     line-height: 1.4;
   }
-
-  /* スマホ：曜日文字小さく */
-  .cal-weekday { font-size: 0.72rem; padding: 3px 2px; text-align: left; }
 }
 </style>
 </head>
@@ -569,23 +575,21 @@ function parseSchedule(text) {
 
 
 // ===== 日本の祝日 =====
-// 固定祝日
 const FIXED_HOLIDAYS = {
   '1-1':  '元日',
   '2-11': '建国記念の日',
   '2-23': '天皇誕生日',
-  '3-20': '春分の日',  // 近似値・毎年変動するが一般的な日付
+  '3-20': '春分の日',
   '4-29': '昭和の日',
   '5-3':  '憲法記念日',
   '5-4':  'みどりの日',
   '5-5':  'こどもの日',
   '8-11': '山の日',
-  '9-23': '秋分の日',  // 近似値
+  '9-23': '秋分の日',
   '11-3': '文化の日',
   '11-23':'勤労感謝の日',
 };
 
-// ハッピーマンデー（第n月曜日）
 const HAPPY_MONDAY = [
   { month:1, nth:2, name:'成人の日' },
   { month:7, nth:3, name:'海の日' },
@@ -593,7 +597,6 @@ const HAPPY_MONDAY = [
   { month:10,nth:2, name:'スポーツの日' },
 ];
 
-// 春分・秋分（天文計算近似）
 function getEquinox(year) {
   const spring = Math.floor(20.8431 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
   const autumn = Math.floor(23.2488 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
@@ -614,30 +617,25 @@ function getHolidaysForYear(year) {
   const h = {};
   const eq = getEquinox(year);
 
-  // 固定祝日
   for (const [key, name] of Object.entries(FIXED_HOLIDAYS)) {
     const [m, d] = key.split('-').map(Number);
     h[toKey(year, m, d)] = name;
   }
-  // 春分・秋分（計算値で上書き）
   h[toKey(year, 3, eq.spring)] = '春分の日';
   h[toKey(year, 9, eq.autumn)] = '秋分の日';
 
-  // ハッピーマンデー
   for (const hm of HAPPY_MONDAY) {
     const d = getNthMonday(year, hm.month, hm.nth);
     if (d) h[toKey(year, hm.month, d)] = hm.name;
   }
 
-  // 振替休日（日曜日が祝日 → 翌月曜日）
   const keys = Object.keys(h);
   const substitutes = {};
   for (const k of keys) {
     const dt = new Date(k);
-    if (dt.getDay() === 0) { // 日曜
+    if (dt.getDay() === 0) {
       let next = new Date(dt);
       next.setDate(next.getDate() + 1);
-      // 連続祝日なら翌々日以降にずらす
       while (h[toKey(next.getFullYear(), next.getMonth()+1, next.getDate())] ||
              substitutes[toKey(next.getFullYear(), next.getMonth()+1, next.getDate())]) {
         next.setDate(next.getDate() + 1);
@@ -647,8 +645,6 @@ function getHolidaysForYear(year) {
   }
   Object.assign(h, substitutes);
 
-  // 国民の祝日（祝日に挟まれた平日）
-  const allKeys = [...Object.keys(h), ...Object.keys(substitutes)].sort();
   for (let m = 1; m <= 12; m++) {
     const daysInMonth = new Date(year, m, 0).getDate();
     for (let d = 2; d < daysInMonth; d++) {
@@ -665,7 +661,6 @@ function getHolidaysForYear(year) {
   return h;
 }
 
-// 祝日キャッシュ
 const holidayCache = {};
 function getHoliday(year, month, day) {
   if (!holidayCache[year]) holidayCache[year] = getHolidaysForYear(year);
@@ -711,9 +706,8 @@ function makeCell(year,month,day,other){
   if(!other&&year===today.getFullYear()&&month===today.getMonth()+1&&day===today.getDate())
     cell.classList.add('today');
   const key=toKey(year,month,day);
-  if(selectedDate===key)cell.classList.add('selected');
+  // selected クラスは付けない（青ハイライト廃止）
 
-  // 祝日判定
   const holidayName = !other ? getHoliday(year,month,day) : null;
   if(holidayName) cell.classList.add('holiday');
 
@@ -721,7 +715,6 @@ function makeCell(year,month,day,other){
   num.className='day-num'; num.textContent=day;
   cell.appendChild(num);
 
-  // 祝日名チップ
   if(holidayName){
     const hChip=document.createElement('div');
     hChip.className='holiday-chip';
@@ -804,7 +797,7 @@ function onTextChange(){
   renderCalendar(); scheduleAutoSave();
 }
 
-// ===== スワイプ（閾値80px） =====
+// ===== スワイプ =====
 let tx=0,ty=0;
 document.addEventListener('DOMContentLoaded',()=>{
   const sw=document.getElementById('cal-swipe-wrapper');
@@ -880,7 +873,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   syncLoad();
 
-  // PWA Service Worker
   if('serviceWorker' in navigator){
     const sw=`
 self.addEventListener('install',e=>e.waitUntil(
