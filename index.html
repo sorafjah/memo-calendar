@@ -7,7 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="カレンダー">
 <meta name="theme-color" content="#ffffff">
-<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;カレンダー&quot;,&quot;short_name&quot;:&quot;カレンダー&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%23ffffff&quot;,&quot;theme_color&quot;:&quot;%23ffffff&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233a7bd5'/><text y='.9em' font-size='80' x='10'>📅</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
+<link rel="apple-touch-icon" href="calendar.png">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;カレンダー&quot;,&quot;short_name&quot;:&quot;カレンダー&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%23ffffff&quot;,&quot;theme_color&quot;:&quot;%23ffffff&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;calendar.png&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
 <title>カレンダー</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,7 +27,6 @@
   --event-border: #5bb8f5;
   --font: "BIZ UDGothic", "BIZ UDP Gothic", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
   --font-pc: Arial, "Hiragino Kaku Gothic ProN", sans-serif;
-  /* 曜日ヘッダーと日付数字を揃えるための共通左余白 */
   --cell-pad: 3px;
   --daynum-w: 26px;
 }
@@ -96,7 +96,6 @@ html, body {
   padding: 4px;
 }
 
-/* 曜日ヘッダー：セルと同じ padding + daynum 分の左余白で数字と揃える */
 .cal-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -105,9 +104,7 @@ html, body {
 .cal-weekday {
   font-size: 0.88rem;
   font-weight: 700;
-  /* セルと同じ padding の左余白 + (daynum幅の中央に来る位置) */
   padding: 4px var(--cell-pad);
-  /* daynum は幅 26px で中央揃え → テキストを同じ幅の中央に */
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -146,15 +143,18 @@ html, body {
 }
 .cal-cell:active { background: var(--accent-light); }
 .cal-cell.other-month { opacity: 0.28; }
+
+/* 今日：青丸＋白抜き文字のみ、背景塗りつぶしなし */
 .cal-cell.today .day-num {
   background: var(--today-bg);
   color: #fff;
   border-radius: 50%;
 }
-/* selected の青ハイライト削除 */
-/* .cal-cell.selected { border-color: var(--accent); background: var(--accent-light); } */
+
 .cal-cell.sunday  .day-num { color: #c0392b; }
 .cal-cell.saturday .day-num { color: #2980b9; }
+/* 今日が日・土の場合も白抜き優先 */
+.cal-cell.today .day-num { color: #fff !important; }
 
 .day-num {
   font-size: 1rem;
@@ -193,6 +193,7 @@ html, body {
 
 /* ===== 祝日 ===== */
 .cal-cell.holiday .day-num { color: #c0392b; }
+.cal-cell.today.holiday .day-num { color: #fff !important; }
 .holiday-chip {
   font-size: 0.6rem;
   color: #c0392b;
@@ -243,7 +244,8 @@ footer {
   flex-shrink: 0;
 }
 .sync-status { font-size: 0.75rem; color: var(--text-light); }
-.btn-settings {
+.footer-right { display: flex; gap: 8px; align-items: center; }
+.btn-settings, .btn-reload {
   background: none;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -253,6 +255,10 @@ footer {
   color: var(--text-light);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+/* PCではリロードボタン非表示 */
+@media (min-width: 701px) {
+  .btn-reload { display: none; }
 }
 
 /* ===== ポップアップ ===== */
@@ -373,7 +379,6 @@ footer {
 .btn-primary  { background: var(--accent); color: #fff; }
 .btn-secondary { background: var(--border); color: var(--text); }
 
-
 /* ===== PC専用スタイル ===== */
 @media (min-width: 701px) {
   html, body { font-family: var(--font-pc); font-size: 18px; }
@@ -392,26 +397,21 @@ footer {
 
   .pane-calendar {
     flex: none;
-    /* 58vh → 46vh に縮小してメモ領域を広げる */
-    height: 46vh;
-    min-height: 260px;
+    /* 46vh → 52vh に少し広げる */
+    height: 52vh;
+    min-height: 280px;
     border-right: none;
     border-bottom: 2px solid var(--border);
   }
   .cal-inner { padding: 2px; }
 
   .pane-text { flex: 1; min-height: 100px; }
-  /* スマホメモのフォントを大きく */
   #schedule-text { font-size: 1.05rem; line-height: 2.2; }
 
-  /* スマホ：日付数字小さく */
   :root { --daynum-w: 20px; }
   .day-num { font-size: 0.8rem; width: 20px; height: 20px; }
-
-  /* スマホ：曜日文字小さく */
   .cal-weekday { font-size: 0.72rem; padding: 3px var(--cell-pad); width: var(--daynum-w); }
 
-  /* スマホ：チップは赤枠テキストに変える */
   .event-chip {
     font-size: 0.6rem;
     font-weight: 700;
@@ -428,7 +428,6 @@ footer {
 <div class="app">
   <div class="main">
 
-    <!-- カレンダー（PC左・スマホ上） -->
     <div class="pane-calendar">
       <div class="cal-nav">
         <button id="btn-prev">&#8249;</button>
@@ -451,7 +450,6 @@ footer {
       </div>
     </div>
 
-    <!-- テキスト（PC右・スマホ下） -->
     <div class="pane-text">
       <textarea id="schedule-text"
         placeholder="6/5 生徒会選挙ポスター&#10;6/23火 創立記念日&#10;10/7〜10/9 修学旅行"></textarea>
@@ -461,7 +459,10 @@ footer {
 
   <footer>
     <span class="sync-status" id="sync-status"></span>
-    <button class="btn-settings" id="btn-settings">GitHub設定</button>
+    <div class="footer-right">
+      <button class="btn-reload" id="btn-reload">再読込</button>
+      <button class="btn-settings" id="btn-settings">GitHub設定</button>
+    </div>
   </footer>
 </div>
 
@@ -573,36 +574,22 @@ function parseSchedule(text) {
   return result;
 }
 
-
 // ===== 日本の祝日 =====
 const FIXED_HOLIDAYS = {
-  '1-1':  '元日',
-  '2-11': '建国記念の日',
-  '2-23': '天皇誕生日',
-  '3-20': '春分の日',
-  '4-29': '昭和の日',
-  '5-3':  '憲法記念日',
-  '5-4':  'みどりの日',
-  '5-5':  'こどもの日',
-  '8-11': '山の日',
-  '9-23': '秋分の日',
-  '11-3': '文化の日',
-  '11-23':'勤労感謝の日',
+  '1-1':  '元日', '2-11': '建国記念の日', '2-23': '天皇誕生日',
+  '3-20': '春分の日', '4-29': '昭和の日', '5-3':  '憲法記念日',
+  '5-4':  'みどりの日', '5-5':  'こどもの日', '8-11': '山の日',
+  '9-23': '秋分の日', '11-3': '文化の日', '11-23':'勤労感謝の日',
 };
-
 const HAPPY_MONDAY = [
-  { month:1, nth:2, name:'成人の日' },
-  { month:7, nth:3, name:'海の日' },
-  { month:9, nth:3, name:'敬老の日' },
-  { month:10,nth:2, name:'スポーツの日' },
+  { month:1, nth:2, name:'成人の日' }, { month:7, nth:3, name:'海の日' },
+  { month:9, nth:3, name:'敬老の日' }, { month:10,nth:2, name:'スポーツの日' },
 ];
-
 function getEquinox(year) {
   const spring = Math.floor(20.8431 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
   const autumn = Math.floor(23.2488 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
   return { spring, autumn };
 }
-
 function getNthMonday(year, month, nth) {
   let count = 0;
   for (let d = 1; d <= 31; d++) {
@@ -612,23 +599,19 @@ function getNthMonday(year, month, nth) {
   }
   return null;
 }
-
 function getHolidaysForYear(year) {
   const h = {};
   const eq = getEquinox(year);
-
   for (const [key, name] of Object.entries(FIXED_HOLIDAYS)) {
     const [m, d] = key.split('-').map(Number);
     h[toKey(year, m, d)] = name;
   }
   h[toKey(year, 3, eq.spring)] = '春分の日';
   h[toKey(year, 9, eq.autumn)] = '秋分の日';
-
   for (const hm of HAPPY_MONDAY) {
     const d = getNthMonday(year, hm.month, hm.nth);
     if (d) h[toKey(year, hm.month, d)] = hm.name;
   }
-
   const keys = Object.keys(h);
   const substitutes = {};
   for (const k of keys) {
@@ -644,7 +627,6 @@ function getHolidaysForYear(year) {
     }
   }
   Object.assign(h, substitutes);
-
   for (let m = 1; m <= 12; m++) {
     const daysInMonth = new Date(year, m, 0).getDate();
     for (let d = 2; d < daysInMonth; d++) {
@@ -657,10 +639,8 @@ function getHolidaysForYear(year) {
       if (h[prev] && h[next]) h[k] = '国民の祝日';
     }
   }
-
   return h;
 }
-
 const holidayCache = {};
 function getHoliday(year, month, day) {
   if (!holidayCache[year]) holidayCache[year] = getHolidaysForYear(year);
@@ -706,7 +686,6 @@ function makeCell(year,month,day,other){
   if(!other&&year===today.getFullYear()&&month===today.getMonth()+1&&day===today.getDate())
     cell.classList.add('today');
   const key=toKey(year,month,day);
-  // selected クラスは付けない（青ハイライト廃止）
 
   const holidayName = !other ? getHoliday(year,month,day) : null;
   if(holidayName) cell.classList.add('holiday');
@@ -767,17 +746,24 @@ function closePopup(){
   document.getElementById('popup').classList.add('hidden');
   popupDateKey=null;
 }
+
+// 追加 → メモの先頭に挿入 → ポップアップを閉じる
 function addEventFromPopup(){
   const input=document.getElementById('popup-input');
   const title=input.value.trim();
   if(!title||!popupDateKey)return;
   const ta=document.getElementById('schedule-text');
   const newLine=`${popupMonth}/${popupDay} ${title}`;
-  ta.value=ta.value?ta.value+'\n'+newLine:newLine;
+  // メモの先頭に追加
+  ta.value = ta.value ? newLine+'\n'+ta.value : newLine;
   events=parseSchedule(ta.value);
-  renderCalendar(); renderPopupEvents();
-  input.value=''; scheduleAutoSave();
+  renderCalendar();
+  input.value='';
+  scheduleAutoSave();
+  // 追加したらすぐ閉じる
+  closePopup();
 }
+
 function highlightLine(idx){
   const ta=document.getElementById('schedule-text');
   const lines=ta.value.split('\n');
@@ -870,6 +856,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('popup').addEventListener('click',e=>{if(e.target===document.getElementById('popup'))closePopup();});
   document.getElementById('popup-add-btn').addEventListener('click',addEventFromPopup);
   document.getElementById('popup-input').addEventListener('keydown',e=>{if(e.key==='Enter')addEventFromPopup();});
+  document.getElementById('btn-reload').addEventListener('click',syncLoad);
 
   syncLoad();
 
