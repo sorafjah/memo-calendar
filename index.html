@@ -818,14 +818,28 @@ async function ghFetch(text){
   const c=getGhConfig();
   const url=`https://api.github.com/repos/${c.user}/${c.repo}/contents/${c.path}`;
   const headers={'Authorization':`token ${c.token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
-  let sha='';
+
+  // まず現在のファイル情報を取得（sha と内容）
+  let sha = null;
+  let existingContent = null;
   try{
     const r=await fetch(url,{headers});
-    if(r.ok){const d=await r.json();sha=d.sha;if(text===null)return decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));}
+    if(r.ok){
+      const d=await r.json();
+      sha=d.sha;
+      existingContent=decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));
+    }
   }catch(e){}
-  if(text===null)return null;
-  const body={message:'Update schedule',content:btoa(unescape(encodeURIComponent(text)))};
-  if(sha)body.sha=sha;
+
+  // 読み込みモード
+  if(text===null) return existingContent;
+
+  // 書き込みモード: sha が取れていれば必ず付ける（既存ファイルの上書きに必須）
+  const body={
+    message:'Update schedule',
+    content:btoa(unescape(encodeURIComponent(text)))
+  };
+  if(sha) body.sha=sha;
   const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
   return r.ok;
 }
