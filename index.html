@@ -145,14 +145,13 @@ html, body {
 .cal-cell.other-month { opacity: 0.28; }
 
 .cal-cell.today .day-num {
-  background: var(--today-bg);
-  color: #fff;
+  border: 2px solid var(--today-bg);
   border-radius: 50%;
 }
 
 .cal-cell.sunday  .day-num { color: #c0392b; }
 .cal-cell.saturday .day-num { color: #2980b9; }
-.cal-cell.today .day-num { color: #fff !important; }
+/* 今日が日・土でも文字色はそのまま（輪っかのみ） */
 
 .day-num {
   font-size: 1rem;
@@ -191,7 +190,7 @@ html, body {
 
 /* ===== 祝日 ===== */
 .cal-cell.holiday .day-num { color: #c0392b; }
-.cal-cell.today.holiday .day-num { color: #fff !important; }
+/* .cal-cell.today.holiday: 輪っかのみなのでcolor上書き不要 */
 .holiday-chip {
   font-size: 0.6rem;
   color: #c0392b;
@@ -801,6 +800,7 @@ function loadGhSettings(){
 }
 function saveGhSettings(){
   GH_KEYS.forEach(k=>localStorage.setItem(k, document.getElementById(k).value));
+  cachedSha = null; // 設定変更時はshaキャッシュをリセット
   document.getElementById('modal-github').classList.add('hidden');
   syncLoad();
 }
@@ -814,34 +814,17 @@ function getGhConfig(){
 }
 function isGhConfigured(){ const c=getGhConfig(); return c.user&&c.repo&&c.token; }
 
-async function ghFetch(text){
+// shaをキャッシュして保存のたびにGETしない（連続編集でsha競合が起きるのを防ぐ）
+let cachedSha = null;
+let isSyncing = false;
+
+function ghUrl(){
   const c=getGhConfig();
-  const url=`https://api.github.com/repos/${c.user}/${c.repo}/contents/${c.path}`;
-  const headers={'Authorization':`token ${c.token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
-
-  // まず現在のファイル情報を取得（sha と内容）
-  let sha = null;
-  let existingContent = null;
-  try{
-    const r=await fetch(url,{headers});
-    if(r.ok){
-      const d=await r.json();
-      sha=d.sha;
-      existingContent=decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));
-    }
-  }catch(e){}
-
-  // 読み込みモード
-  if(text===null) return existingContent;
-
-  // 書き込みモード: sha が取れていれば必ず付ける（既存ファイルの上書きに必須）
-  const body={
-    message:'Update schedule',
-    content:btoa(unescape(encodeURIComponent(text)))
-  };
-  if(sha) body.sha=sha;
-  const r=await fetch(url,{method:'PUT',headers,body:JSON.stringify(body)});
-  return r.ok;
+  return `https://api.github.com/repos/${c.user}/${c.repo}/contents/${c.path}`;
+}
+function ghHeaders(){
+  const c=getGhConfig();
+  return {'Authorization':`token ${c.token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
 }
 
 function setStatus(msg,ok=true){
@@ -849,26 +832,105 @@ function setStatus(msg,ok=true){
   el.textContent=msg; el.style.color=ok?'#27ae60':'#e74c3c';
   if(msg)setTimeout(()=>{el.textContent='';},3000);
 }
-async function syncLoad(){
-  if(!isGhConfigured())return; setStatus('読込中…');
+
+// サーバ上の現在のshaを取得（ファイルが無ければnull＝新規作成扱い）
+async function fetchCurrentSha(){
   try{
-    const text=await ghFetch(null);
-    if(text!==null){document.getElementById('schedule-text').value=text;events=parseSchedule(text);renderCalendar();setStatus('読込完了');}
-    else setStatus('');
-  }catch(e){setStatus('読込失敗',false);}
+    const r=await fetch(ghUrl(),{headers:ghHeaders()});
+    if(r.ok){ const d=await r.json(); return d.sha; }
+    if(r.status===404) return null; // ファイルなし
+    console.error('fetchCurrentSha error', r.status);
+  }catch(e){ console.error('fetchCurrentSha exception', e); }
+  return null;
 }
-async function syncSave(){
-  if(!isGhConfigured())return; setStatus('保存中…');
+
+// 実際にPUTする（shaを引数で渡す）
+async function putFile(text, sha){
+  const body={
+    message:'Update schedule',
+    content:btoa(unescape(encodeURIComponent(text)))
+  };
+  if(sha) body.sha=sha;
+  return await fetch(ghUrl(),{method:'PUT',headers:ghHeaders(),body:JSON.stringify(body)});
+}
+
+async function syncLoad(){
+  if(!isGhConfigured())return;
+  if(isSyncing)return;
+  isSyncing=true;
+  setStatus('読込中…');
   try{
-    const ok=await ghFetch(document.getElementById('schedule-text').value);
-    setStatus(ok?'保存完了':'保存失敗',!!ok);
-  }catch(e){setStatus('保存失敗',false);}
+    const r=await fetch(ghUrl(),{headers:ghHeaders()});
+    if(r.ok){
+      const d=await r.json();
+      cachedSha=d.sha; // shaをキャッシュ
+      const text=decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));
+      document.getElementById('schedule-text').value=text;
+      events=parseSchedule(text);
+      renderCalendar();
+      setStatus('読込完了');
+    } else if(r.status===404){
+      // ファイルがまだ無い（初回）。エラーではない。
+      cachedSha=null;
+      setStatus('');
+    } else {
+      const err=await r.json().catch(()=>({}));
+      setStatus('読込失敗: '+r.status,false);
+      console.error('syncLoad error',r.status,err);
+    }
+  }catch(e){
+    setStatus('読込失敗',false);
+    console.error('syncLoad exception',e);
+  }finally{
+    isSyncing=false;
+  }
+}
+
+async function syncSave(){
+  if(!isGhConfigured())return;
+  if(isSyncing)return;
+  isSyncing=true;
+  setStatus('保存中…');
+  try{
+    const text=document.getElementById('schedule-text').value;
+
+    // 1回目: 手持ちのshaで保存を試す
+    let r=await putFile(text, cachedSha);
+
+    // sha不一致(409)やsha無し/不正(422)なら、最新shaを取り直して1回だけリトライ
+    if(!r.ok && (r.status===409 || r.status===422)){
+      console.warn('save retry: status='+r.status+' → sha取り直し');
+      cachedSha=await fetchCurrentSha();
+      r=await putFile(text, cachedSha);
+    }
+
+    if(r.ok){
+      const d=await r.json();
+      cachedSha=d.content.sha; // 新しいshaをキャッシュ
+      setStatus('保存完了');
+    } else {
+      const err=await r.json().catch(()=>({}));
+      setStatus('保存失敗: '+r.status,false);
+      console.error('syncSave error',r.status,err);
+    }
+  }catch(e){
+    setStatus('保存失敗',false);
+    console.error('syncSave exception',e);
+  }finally{
+    isSyncing=false;
+  }
 }
 
 // ===== 初期化 =====
 document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('schedule-text').value=SAMPLE;
-  events=parseSchedule(SAMPLE);
+  // GitHub設定済みなら読込完了までサンプルを入れない（サンプルで上書き保存される事故を防ぐ）
+  if(isGhConfigured()){
+    document.getElementById('schedule-text').value='';
+    events={};
+  } else {
+    document.getElementById('schedule-text').value=SAMPLE;
+    events=parseSchedule(SAMPLE);
+  }
   renderCalendar();
 
   document.getElementById('schedule-text').addEventListener('input',onTextChange);
