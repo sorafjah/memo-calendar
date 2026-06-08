@@ -144,7 +144,6 @@ html, body {
 .cal-cell:active { background: var(--accent-light); }
 .cal-cell.other-month { opacity: 0.28; }
 
-/* 今日：青丸＋白抜き文字のみ、背景塗りつぶしなし */
 .cal-cell.today .day-num {
   background: var(--today-bg);
   color: #fff;
@@ -153,7 +152,6 @@ html, body {
 
 .cal-cell.sunday  .day-num { color: #c0392b; }
 .cal-cell.saturday .day-num { color: #2980b9; }
-/* 今日が日・土の場合も白抜き優先 */
 .cal-cell.today .day-num { color: #fff !important; }
 
 .day-num {
@@ -256,7 +254,6 @@ footer {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-/* PCではリロードボタン非表示 */
 @media (min-width: 701px) {
   .btn-reload { display: none; }
 }
@@ -397,7 +394,6 @@ footer {
 
   .pane-calendar {
     flex: none;
-    /* 46vh → 52vh に少し広げる */
     height: 52vh;
     min-height: 280px;
     border-right: none;
@@ -482,24 +478,25 @@ footer {
 </div>
 
 <!-- GitHub設定モーダル -->
+<!-- ★ input の id に calendar- プレフィックスを付けて他アプリと分離 -->
 <div class="modal hidden" id="modal-github">
   <div class="modal-box">
     <h2>GitHub設定</h2>
     <div class="form-group">
       <label>GitHubユーザー名</label>
-      <input type="text" id="gh-user" autocomplete="off">
+      <input type="text" id="calendar-gh-user" autocomplete="off">
     </div>
     <div class="form-group">
       <label>リポジトリ名</label>
-      <input type="text" id="gh-repo" autocomplete="off">
+      <input type="text" id="calendar-gh-repo" autocomplete="off">
     </div>
     <div class="form-group">
       <label>ファイルパス</label>
-      <input type="text" id="gh-path" placeholder="schedule.txt" autocomplete="off">
+      <input type="text" id="calendar-gh-path" placeholder="schedule.txt" autocomplete="off">
     </div>
     <div class="form-group">
       <label>Personal Access Token</label>
-      <input type="password" id="gh-token" autocomplete="off">
+      <input type="password" id="calendar-gh-token" autocomplete="off">
       <div class="form-note">localStorageのみに保存。外部送信なし。</div>
     </div>
     <div class="modal-buttons">
@@ -747,20 +744,17 @@ function closePopup(){
   popupDateKey=null;
 }
 
-// 追加 → メモの先頭に挿入 → ポップアップを閉じる
 function addEventFromPopup(){
   const input=document.getElementById('popup-input');
   const title=input.value.trim();
   if(!title||!popupDateKey)return;
   const ta=document.getElementById('schedule-text');
   const newLine=`${popupMonth}/${popupDay} ${title}`;
-  // メモの先頭に追加
   ta.value = ta.value ? newLine+'\n'+ta.value : newLine;
   events=parseSchedule(ta.value);
   renderCalendar();
   input.value='';
   scheduleAutoSave();
-  // 追加したらすぐ閉じる
   closePopup();
 }
 
@@ -797,10 +791,27 @@ function goPrev(){ if(--currentMonth<0){currentMonth=11;currentYear--;} renderCa
 function goNext(){ if(++currentMonth>11){currentMonth=0;currentYear++;} renderCalendar(); }
 
 // ===== GitHub =====
-const GH_KEYS=['gh-user','gh-repo','gh-path','gh-token'];
-function loadGhSettings(){ GH_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v)document.getElementById(k).value=v;}); }
-function saveGhSettings(){ GH_KEYS.forEach(k=>localStorage.setItem(k,document.getElementById(k).value)); document.getElementById('modal-github').classList.add('hidden'); syncLoad(); }
-function getGhConfig(){ return {user:localStorage.getItem('gh-user')||'',repo:localStorage.getItem('gh-repo')||'',path:localStorage.getItem('gh-path')||'schedule.txt',token:localStorage.getItem('gh-token')||''}; }
+// ★ キー名に calendar- プレフィックスを付けて他アプリ（SyncNote等）と競合しないようにする
+const GH_KEYS=['calendar-gh-user','calendar-gh-repo','calendar-gh-path','calendar-gh-token'];
+function loadGhSettings(){
+  GH_KEYS.forEach(k=>{
+    const v=localStorage.getItem(k);
+    if(v) document.getElementById(k).value=v;
+  });
+}
+function saveGhSettings(){
+  GH_KEYS.forEach(k=>localStorage.setItem(k, document.getElementById(k).value));
+  document.getElementById('modal-github').classList.add('hidden');
+  syncLoad();
+}
+function getGhConfig(){
+  return {
+    user:  localStorage.getItem('calendar-gh-user')  || '',
+    repo:  localStorage.getItem('calendar-gh-repo')  || '',
+    path:  localStorage.getItem('calendar-gh-path')  || 'schedule.txt',
+    token: localStorage.getItem('calendar-gh-token') || ''
+  };
+}
 function isGhConfigured(){ const c=getGhConfig(); return c.user&&c.repo&&c.token; }
 
 async function ghFetch(text){
